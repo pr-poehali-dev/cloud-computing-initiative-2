@@ -16,23 +16,15 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
 
       <svg className="absolute w-0 h-0">
         <defs>
-          {/* Маска с размытыми краями — картинка плавно растворяется в фон */}
-          <filter id="edge-fade" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
-            {/* Берём альфа-канал и сильно размываем его по краям */}
-            <feGaussianBlur in="SourceAlpha" stdDeviation={28} result="blurAlpha" />
-            {/* Немного эрозия чтобы сам контент не уменьшался */}
-            <feComposite in="SourceGraphic" in2="blurAlpha" operator="in" />
-          </filter>
-
-          <mask id="fade-mask">
-            {/* Белый радиальный градиент — центр виден, края прозрачны */}
-            <radialGradient id="fade-grad" cx="50%" cy="48%" r="46%" fx="50%" fy="48%">
-              <stop offset="35%" stopColor="white" stopOpacity="1" />
-              <stop offset="70%" stopColor="white" stopOpacity="0.7" />
-              <stop offset="88%" stopColor="white" stopOpacity="0.2" />
+          {/* Радиальная маска — центр виден, края плавно исчезают */}
+          <mask id="fade-mask" maskContentUnits="objectBoundingBox">
+            <radialGradient id="fade-grad" cx="50%" cy="48%" r="50%">
+              <stop offset="30%" stopColor="white" stopOpacity="1" />
+              <stop offset="65%" stopColor="white" stopOpacity="0.8" />
+              <stop offset="85%" stopColor="white" stopOpacity="0.3" />
               <stop offset="100%" stopColor="white" stopOpacity="0" />
             </radialGradient>
-            <rect width="100%" height="100%" fill="url(#fade-grad)" />
+            <rect x="0" y="0" width="1" height="1" fill="url(#fade-grad)" />
           </mask>
         </defs>
       </svg>
@@ -43,10 +35,13 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         style={{ background: "linear-gradient(160deg, #f9b8d4 0%, #f2a7c3 50%, #e8007a 100%)" }}
       />
 
-      {/* 2. Картинка с растворяющимися краями */}
+      {/* 2. Картинка — без mixBlendMode, только маска по краям */}
       <div
         className="absolute inset-0 w-full h-full flex items-center justify-center"
-        style={{ mask: "url(#fade-mask)", WebkitMask: "url(#fade-mask)", mixBlendMode: "multiply" }}
+        style={{
+          WebkitMaskImage: "radial-gradient(ellipse 50% 50% at 50% 48%, black 30%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.2) 80%, transparent 100%)",
+          maskImage: "radial-gradient(ellipse 50% 50% at 50% 48%, black 30%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.2) 80%, transparent 100%)",
+        }}
       >
         <img
           src={FACE_IMG}
@@ -63,11 +58,9 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
       <div
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{
-          mask: "url(#fade-mask)",
-          WebkitMask: "url(#fade-mask)",
           clipPath: "ellipse(32% 44% at 50% 48%)",
           mixBlendMode: "screen",
-          opacity: 0.5,
+          opacity: 0.45,
         }}
       >
         <LiquidMetal
