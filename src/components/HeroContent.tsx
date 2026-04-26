@@ -9,29 +9,29 @@ export default function HeroContent() {
           }}
         >
           <div className="absolute top-0 left-1 right-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
-          <span className="text-white/90 text-xs font-light relative z-10">Новые шейдеры Paper Design</span>
+          <span className="text-white/90 text-xs font-light relative z-10">Закрытый женский клуб · Только для своих</span>
         </div>
 
         {/* Main Heading */}
         <h1 className="text-5xl md:text-6xl md:leading-16 tracking-tight font-light text-white mb-4">
-          <span className="font-medium italic">Красивые</span> шейдеры
+          <span className="font-medium italic">Место, где</span> рождаются
           <br />
-          <span className="font-light tracking-tight text-white">и эффекты</span>
+          <span className="font-light tracking-tight text-white">незабываемые события</span>
         </h1>
 
         {/* Description */}
         <p className="text-xs font-light text-white/70 mb-4 leading-relaxed">
-          Создавайте впечатляющие визуальные эффекты с передовой технологией шейдеров. Интерактивное освещение,
-          плавные анимации и красивые эффекты, реагирующие на каждое движение.
+          Камерные встречи, мастер-классы, нетворкинг и вечера для женщин, которые ценят качество и атмосферу.
+          Запишитесь на ближайшее мероприятие и станьте частью нашего сообщества.
         </p>
 
         {/* Buttons */}
         <div className="flex items-center gap-4 flex-wrap">
           <button className="px-8 py-3 rounded-full bg-transparent border border-white/30 text-white font-normal text-xs transition-all duration-200 hover:bg-white/10 hover:border-white/50 cursor-pointer">
-            Тарифы
+            Все мероприятия
           </button>
           <button className="px-8 py-3 rounded-full bg-white text-black font-normal text-xs transition-all duration-200 hover:bg-white/90 cursor-pointer">
-            Начать
+            Вступить в клуб
           </button>
         </div>
       </div>

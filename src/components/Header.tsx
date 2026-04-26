@@ -2,19 +2,25 @@ export default function Header() {
   return (
     <header className="absolute top-0 left-0 right-0 z-11 p-6">
       <div className="flex justify-between items-center">
-        <div className="text-white text-sm uppercase tracking-wide">Vertex Studio</div>
+        <div className="text-white text-sm uppercase tracking-widest font-light">Her Club</div>
         <nav className="flex gap-8">
           <a
-            href="/about"
-            className="text-white hover:text-neutral-400 transition-colors duration-300 uppercase text-sm"
+            href="#events"
+            className="text-white hover:text-pink-300 transition-colors duration-300 uppercase text-sm"
           >
-            О нас
+            Мероприятия
           </a>
           <a
-            href="/contact"
-            className="text-white hover:text-neutral-400 transition-colors duration-300 uppercase text-sm"
+            href="#about"
+            className="text-white hover:text-pink-300 transition-colors duration-300 uppercase text-sm"
           >
-            Контакты
+            О клубе
+          </a>
+          <a
+            href="#join"
+            className="text-white hover:text-pink-300 transition-colors duration-300 uppercase text-sm"
+          >
+            Вступить
           </a>
         </nav>
       </div>
