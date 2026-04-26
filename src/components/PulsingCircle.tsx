@@ -43,7 +43,7 @@ export default function PulsingCircle() {
           </defs>
           <text className="text-sm fill-white/80">
             <textPath href="#circle" startOffset="0%">
-              Her Club · Женский клуб · Her Club · Женский клуб ·
+              МОЖНО · Женский клуб · МОЖНО · Женский клуб ·
             </textPath>
           </text>
         </motion.svg>

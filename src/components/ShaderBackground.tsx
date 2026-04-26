@@ -1,6 +1,6 @@
 import type React from "react"
 import { useEffect, useRef } from "react"
-import { MeshGradient } from "@paper-design/shaders-react"
+import { Swirl, LiquidMetal } from "@paper-design/shaders-react"
 
 interface ShaderBackgroundProps {
   children: React.ReactNode
@@ -58,15 +58,26 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
       </svg>
 
       {/* Background Shaders */}
-      <MeshGradient
+      <Swirl
         className="absolute inset-0 w-full h-full"
-        colors={["#0a0010", "#6b1a4a", "#ffffff", "#2d0a3a", "#8b1a6b"]}
-        speed={0.3}
+        colorBack="#0a0010"
+        colors={["#ff2d78", "#c026a0", "#7c1fa8", "#1a0030", "#ff85c0"]}
+        bandCount={3}
+        twist={2.5}
+        softness={0.6}
+        noiseFrequency={0.4}
+        noisePower={1.2}
+        speed={0.18}
       />
-      <MeshGradient
-        className="absolute inset-0 w-full h-full opacity-60"
-        colors={["#0a0010", "#ffffff", "#c4547d", "#1a0020"]}
-        speed={0.2}
+      <LiquidMetal
+        className="absolute inset-0 w-full h-full opacity-35"
+        colorBack="#00000000"
+        colorTint="#ff2d78"
+        softness={0.7}
+        repetition={2}
+        distortion={0.5}
+        contour={0.3}
+        speed={0.12}
       />
 
       {children}
