@@ -39,8 +39,8 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
       <div
         className="absolute inset-0 w-full h-full flex items-center justify-center"
         style={{
-          WebkitMaskImage: "radial-gradient(ellipse 50% 50% at 50% 48%, black 30%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.2) 80%, transparent 100%)",
-          maskImage: "radial-gradient(ellipse 50% 50% at 50% 48%, black 30%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.2) 80%, transparent 100%)",
+          WebkitMaskImage: "radial-gradient(ellipse 36% 40% at 50% 48%, black 5%, rgba(0,0,0,0.5) 35%, rgba(0,0,0,0.1) 58%, transparent 72%)",
+          maskImage: "radial-gradient(ellipse 36% 40% at 50% 48%, black 5%, rgba(0,0,0,0.5) 35%, rgba(0,0,0,0.1) 58%, transparent 72%)",
         }}
       >
         <img
