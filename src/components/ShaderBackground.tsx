@@ -28,7 +28,7 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
   }, [])
 
   return (
-    <div ref={containerRef} className="min-h-screen relative overflow-hidden" style={{ background: "#7a1a3a" }}>
+    <div ref={containerRef} className="min-h-screen relative overflow-hidden" style={{ background: "#e8007a" }}>
       {/* SVG Filters */}
       <svg className="absolute inset-0 w-0 h-0">
         <defs>
@@ -49,16 +49,16 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         </defs>
       </svg>
 
-      {/* Swirl shader — насыщенные розовые, не уходящие в фиолетовый */}
+      {/* Swirl shader — барби розовый + нежно-фиолетовый вихрь */}
       <Swirl
         className="absolute inset-0 w-full h-full"
-        colorBack="#5c1028"
-        colors={["#e8185a", "#f0437a", "#d4124e", "#f76d95", "#b50d3f"]}
+        colorBack="#cc0066"
+        colors={["#ff69b4", "#e8007a", "#da70d6", "#ff1493", "#c71585"]}
         bandCount={5}
-        twist={3.0}
-        softness={0.6}
-        noiseFrequency={0.45}
-        noisePower={1.3}
+        twist={2.8}
+        softness={0.65}
+        noiseFrequency={0.4}
+        noisePower={1.1}
         speed={0.16}
       />
 
