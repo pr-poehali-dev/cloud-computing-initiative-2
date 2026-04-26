@@ -14,88 +14,75 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
   return (
     <div ref={containerRef} className="min-h-screen relative overflow-hidden" style={{ background: "#f2a7c3" }}>
 
-      {/* SVG фильтры */}
       <svg className="absolute w-0 h-0">
         <defs>
-          {/* Маска по форме лица на картинке — примерно центр-право */}
-          <clipPath id="face-mask" clipPathUnits="objectBoundingBox">
-            <ellipse cx="0.52" cy="0.42" rx="0.28" ry="0.38" />
-          </clipPath>
-
-          <filter id="chromatic" x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
-            <feColorMatrix type="saturate" values="1.4" result="sat" />
-            <feComponentTransfer in="sat" result="bright">
-              <feFuncR type="linear" slope="1.1" />
-              <feFuncG type="linear" slope="1.05" />
-              <feFuncB type="linear" slope="1.2" />
-            </feComponentTransfer>
+          {/* Маска с размытыми краями — картинка плавно растворяется в фон */}
+          <filter id="edge-fade" x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
+            {/* Берём альфа-канал и сильно размываем его по краям */}
+            <feGaussianBlur in="SourceAlpha" stdDeviation={28} result="blurAlpha" />
+            {/* Немного эрозия чтобы сам контент не уменьшался */}
+            <feComposite in="SourceGraphic" in2="blurAlpha" operator="in" />
           </filter>
 
-          <filter id="shimmer-blend" x="-5%" y="-5%" width="110%" height="110%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation={1.5} result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
+          <mask id="fade-mask">
+            {/* Белый радиальный градиент — центр виден, края прозрачны */}
+            <radialGradient id="fade-grad" cx="50%" cy="48%" r="46%" fx="50%" fy="48%">
+              <stop offset="35%" stopColor="white" stopOpacity="1" />
+              <stop offset="70%" stopColor="white" stopOpacity="0.7" />
+              <stop offset="88%" stopColor="white" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            </radialGradient>
+            <rect width="100%" height="100%" fill="url(#fade-grad)" />
+          </mask>
         </defs>
       </svg>
 
-      {/* 1. Фоновый розовый Swirl */}
-      <div className="absolute inset-0 w-full h-full" style={{ background: "linear-gradient(160deg, #f9b8d4 0%, #f2a7c3 50%, #e8007a 100%)" }} />
+      {/* 1. Розовый фон */}
+      <div
+        className="absolute inset-0 w-full h-full"
+        style={{ background: "linear-gradient(160deg, #f9b8d4 0%, #f2a7c3 50%, #e8007a 100%)" }}
+      />
 
-      {/* 2. Картинка — розовый фон убран через multiply, остаётся только хром */}
-      <div className="absolute inset-0 w-full h-full flex items-center justify-center" style={{ mixBlendMode: "multiply" }}>
+      {/* 2. Картинка с растворяющимися краями */}
+      <div
+        className="absolute inset-0 w-full h-full flex items-center justify-center"
+        style={{ mask: "url(#fade-mask)", WebkitMask: "url(#fade-mask)", mixBlendMode: "multiply" }}
+      >
         <img
           src={FACE_IMG}
           alt="chrome face"
           style={{
-            height: "88%",
+            height: "90%",
             width: "auto",
             objectFit: "contain",
-            objectPosition: "center",
-            mixBlendMode: "multiply",
           }}
         />
       </div>
 
-      {/* 3. LiquidMetal перелив поверх лица */}
+      {/* 3. LiquidMetal перелив поверх хрома */}
       <div
-        className="absolute inset-0 w-full h-full pointer-events-none flex items-center justify-center"
-      >
-        <div
-          style={{
-            height: "88%",
-            aspectRatio: "0.57",
-            clipPath: "ellipse(42% 48% at 52% 44%)",
-            mixBlendMode: "screen",
-            opacity: 0.55,
-          }}
-          className="relative"
-        >
-          <LiquidMetal
-            className="w-full h-full"
-            colorBack="#00000000"
-            colorTint="#ffd6ec"
-            softness={0.4}
-            repetition={2.2}
-            distortion={0.55}
-            contour={0.5}
-            shiftRed={0.04}
-            shiftBlue={-0.03}
-            speed={0.26}
-          />
-        </div>
-      </div>
-
-      {/* 4. Лёгкий розовый оверлей по краям для атмосферы */}
-      <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 w-full h-full pointer-events-none"
         style={{
-          background:
-            "radial-gradient(ellipse 55% 55% at 52% 42%, transparent 35%, rgba(204,0,102,0.18) 80%, rgba(150,0,70,0.35) 100%)",
+          mask: "url(#fade-mask)",
+          WebkitMask: "url(#fade-mask)",
+          clipPath: "ellipse(32% 44% at 50% 48%)",
+          mixBlendMode: "screen",
+          opacity: 0.5,
         }}
-      />
+      >
+        <LiquidMetal
+          className="w-full h-full"
+          colorBack="#00000000"
+          colorTint="#ffd6ec"
+          softness={0.4}
+          repetition={2.2}
+          distortion={0.55}
+          contour={0.5}
+          shiftRed={0.04}
+          shiftBlue={-0.03}
+          speed={0.26}
+        />
+      </div>
 
       {children}
     </div>
