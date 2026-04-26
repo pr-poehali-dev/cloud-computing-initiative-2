@@ -54,27 +54,30 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         />
       </div>
 
-      {/* 3. LiquidMetal перелив поверх хрома */}
+      {/* 3. LiquidMetal — та же маска что у картинки, перелив строго в пределах лица */}
       <div
-        className="absolute inset-0 w-full h-full pointer-events-none"
+        className="absolute inset-0 w-full h-full pointer-events-none flex items-center justify-center"
         style={{
-          clipPath: "ellipse(32% 44% at 50% 48%)",
+          WebkitMaskImage: "radial-gradient(ellipse 46% 50% at 50% 48%, black 20%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.15) 75%, transparent 90%)",
+          maskImage: "radial-gradient(ellipse 46% 50% at 50% 48%, black 20%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.15) 75%, transparent 90%)",
           mixBlendMode: "screen",
-          opacity: 0.45,
+          opacity: 0.5,
         }}
       >
-        <LiquidMetal
-          className="w-full h-full"
-          colorBack="#00000000"
-          colorTint="#ffd6ec"
-          softness={0.4}
-          repetition={2.2}
-          distortion={0.55}
-          contour={0.5}
-          shiftRed={0.04}
-          shiftBlue={-0.03}
-          speed={0.26}
-        />
+        <div style={{ height: "130%", aspectRatio: "0.57", position: "relative" }}>
+          <LiquidMetal
+            className="w-full h-full"
+            colorBack="#00000000"
+            colorTint="#ffd6ec"
+            softness={0.4}
+            repetition={2.2}
+            distortion={0.55}
+            contour={0.5}
+            shiftRed={0.04}
+            shiftBlue={-0.03}
+            speed={0.26}
+          />
+        </div>
       </div>
 
       {children}
