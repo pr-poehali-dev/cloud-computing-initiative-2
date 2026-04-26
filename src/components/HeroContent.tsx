@@ -2,19 +2,27 @@ export default function HeroContent() {
   return (
     <main className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6">
       {/* Logo / Club Name */}
-      <div className="mb-6">
+      <div className="mb-4">
         <h1
-          className="text-[clamp(5rem,18vw,14rem)] leading-none tracking-[0.15em] text-white uppercase"
-          style={{ fontFamily: "'Tenor Sans', sans-serif", letterSpacing: "0.2em" }}
+          className="text-[clamp(5rem,18vw,14rem)] leading-none text-white uppercase"
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 700,
+            fontStyle: "italic",
+            letterSpacing: "0.12em",
+            textShadow: "0 2px 40px rgba(0,0,0,0.18)",
+          }}
         >
           МОЖНО
         </h1>
       </div>
 
       {/* Divider */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-5">
         <div className="h-px w-16 bg-white/30" />
-        <span className="text-white/50 text-[10px] uppercase tracking-[0.3em]">женский клуб</span>
+        <span className="text-white/55 text-[10px] uppercase tracking-[0.35em]" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>
+          женский клуб
+        </span>
         <div className="h-px w-16 bg-white/30" />
       </div>
 
