@@ -4,12 +4,12 @@ export default function HeroContent() {
       {/* Logo / Club Name */}
       <div className="mb-4">
         <h1
-          className="text-[clamp(5rem,18vw,14rem)] leading-none text-white uppercase"
+          className="text-[clamp(3rem,12vw,10rem)] leading-none text-white uppercase"
           style={{
             fontFamily: "'Montserrat', sans-serif",
-            fontWeight: 100,
+            fontWeight: 300,
             fontStyle: "normal",
-            letterSpacing: "0.45em",
+            letterSpacing: "0.35em",
             textShadow: "0 2px 40px rgba(0,0,0,0.18)",
           }}
         >
