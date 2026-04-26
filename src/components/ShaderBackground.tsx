@@ -1,133 +1,105 @@
 import type React from "react"
-import { useEffect, useRef } from "react"
-import { Swirl, LiquidMetal } from "@paper-design/shaders-react"
-import FaceSilhouette from "@/components/FaceSilhouette"
+import { useRef } from "react"
+import { LiquidMetal } from "@paper-design/shaders-react"
 
 interface ShaderBackgroundProps {
   children: React.ReactNode
 }
 
+const FACE_IMG = "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/a72fa25a-e0ec-46de-b8af-ce2bf002929a.jpg"
+
 export default function ShaderBackground({ children }: ShaderBackgroundProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const handleMouseEnter = () => {}
-    const handleMouseLeave = () => {}
-    const container = containerRef.current
-    if (container) {
-      container.addEventListener("mouseenter", handleMouseEnter)
-      container.addEventListener("mouseleave", handleMouseLeave)
-    }
-    return () => {
-      if (container) {
-        container.removeEventListener("mouseenter", handleMouseEnter)
-        container.removeEventListener("mouseleave", handleMouseLeave)
-      }
-    }
-  }, [])
-
   return (
-    <div ref={containerRef} className="min-h-screen relative overflow-hidden" style={{ background: "#cc0066" }}>
+    <div ref={containerRef} className="min-h-screen relative overflow-hidden" style={{ background: "#f2a7c3" }}>
 
-      {/* SVG defs — маска женского лица */}
-      <svg className="absolute inset-0 w-0 h-0">
+      {/* SVG фильтры */}
+      <svg className="absolute w-0 h-0">
         <defs>
-          <clipPath id="face-clip" clipPathUnits="objectBoundingBox">
-            {/* Силуэт головы + шеи */}
-            <path d="
-              M 0.5 0.04
-              C 0.34 0.04 0.24 0.10 0.20 0.20
-              C 0.16 0.30 0.16 0.42 0.18 0.52
-              C 0.19 0.60 0.20 0.66 0.22 0.70
-              C 0.25 0.76 0.26 0.80 0.36 0.84
-              C 0.42 0.87 0.44 0.88 0.44 0.92
-              L 0.56 0.92
-              C 0.56 0.88 0.58 0.87 0.64 0.84
-              C 0.74 0.80 0.75 0.76 0.78 0.70
-              C 0.80 0.66 0.81 0.60 0.82 0.52
-              C 0.84 0.42 0.84 0.30 0.80 0.20
-              C 0.76 0.10 0.66 0.04 0.5 0.04 Z
-            " />
-            {/* Волосы сверху */}
-            <path d="
-              M 0.5 0.01
-              C 0.30 0.01 0.14 0.08 0.12 0.22
-              C 0.10 0.14 0.16 0.05 0.28 0.02
-              C 0.35 0.00 0.42 -0.01 0.5 0.01 Z
-            " />
-            <path d="
-              M 0.5 0.01
-              C 0.70 0.01 0.86 0.08 0.88 0.22
-              C 0.90 0.14 0.84 0.05 0.72 0.02
-              C 0.65 0.00 0.58 -0.01 0.5 0.01 Z
-            " />
+          {/* Маска по форме лица на картинке — примерно центр-право */}
+          <clipPath id="face-mask" clipPathUnits="objectBoundingBox">
+            <ellipse cx="0.52" cy="0.42" rx="0.28" ry="0.38" />
           </clipPath>
 
-          <filter id="face-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation={6} result="blur" />
+          <filter id="chromatic" x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+            <feColorMatrix type="saturate" values="1.4" result="sat" />
+            <feComponentTransfer in="sat" result="bright">
+              <feFuncR type="linear" slope="1.1" />
+              <feFuncG type="linear" slope="1.05" />
+              <feFuncB type="linear" slope="1.2" />
+            </feComponentTransfer>
+          </filter>
+
+          <filter id="shimmer-blend" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation={1.5} result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-
-          <filter id="soft-edge" x="-5%" y="-5%" width="110%" height="110%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation={8} />
-          </filter>
         </defs>
       </svg>
 
-      {/* 1. Базовый Swirl фон — барби розовый вихрь */}
-      <Swirl
+      {/* 1. Фоновое фото — хромовое лицо */}
+      <div
         className="absolute inset-0 w-full h-full"
-        colorBack="#cc0066"
-        colors={["#ff69b4", "#e8007a", "#da70d6", "#ff1493", "#c71585"]}
-        bandCount={5}
-        twist={2.8}
-        softness={0.65}
-        noiseFrequency={0.4}
-        noisePower={1.1}
-        speed={0.16}
-      />
-
-      {/* 2. Силуэт лица — LiquidMetal внутри маски (переливающаяся кожа) */}
-      <div
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ clipPath: "url(#face-clip)" }}
-      >
-        <LiquidMetal
-          className="w-full h-full"
-          colorBack="#ff69b4"
-          colorTint="#ffe0f0"
-          softness={0.5}
-          repetition={1.5}
-          distortion={0.4}
-          contour={0.6}
-          shiftRed={0.03}
-          shiftBlue={-0.02}
-          speed={0.22}
-        />
-      </div>
-
-      {/* 3. Мягкое свечение по контуру лица */}
-      <div
-        className="absolute inset-0 pointer-events-none"
         style={{
-          background:
-            "radial-gradient(ellipse 28% 42% at 50% 46%, rgba(255,182,220,0.22) 0%, transparent 70%)",
-          filter: "url(#soft-edge)",
+          backgroundImage: `url(${FACE_IMG})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
+          backgroundRepeat: "no-repeat",
         }}
       />
 
-      {/* 4. SVG-лицо с чертами */}
-      <FaceSilhouette />
+      {/* 2. LiquidMetal — перелив ПОВЕРХ лица, в форме эллипса лица */}
+      <div
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{ clipPath: "ellipse(28% 38% at 52% 42%)" }}
+      >
+        <LiquidMetal
+          className="w-full h-full"
+          colorBack="#00000000"
+          colorTint="#e8c8d8"
+          softness={0.3}
+          repetition={2.5}
+          distortion={0.6}
+          contour={0.4}
+          shiftRed={0.04}
+          shiftBlue={-0.03}
+          speed={0.28}
+        />
+      </div>
 
-      {/* 5. Финальный виньет для глубины */}
+      {/* 3. Второй слой LiquidMetal — более широкий, другой тон для глубины */}
+      <div
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{
+          clipPath: "ellipse(28% 38% at 52% 42%)",
+          mixBlendMode: "screen",
+          opacity: 0.45,
+        }}
+      >
+        <LiquidMetal
+          className="w-full h-full"
+          colorBack="#00000000"
+          colorTint="#ffffff"
+          softness={0.5}
+          repetition={1.8}
+          distortion={0.35}
+          contour={0.7}
+          shiftRed={-0.02}
+          shiftBlue={0.05}
+          speed={0.18}
+        />
+      </div>
+
+      {/* 4. Лёгкий розовый оверлей по краям для атмосферы */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(100,0,50,0.55) 100%)",
+            "radial-gradient(ellipse 55% 55% at 52% 42%, transparent 35%, rgba(204,0,102,0.18) 80%, rgba(150,0,70,0.35) 100%)",
         }}
       />
 
