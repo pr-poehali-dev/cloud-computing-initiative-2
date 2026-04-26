@@ -44,8 +44,8 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
       {/* 1. Фоновый розовый Swirl */}
       <div className="absolute inset-0 w-full h-full" style={{ background: "linear-gradient(160deg, #f9b8d4 0%, #f2a7c3 50%, #e8007a 100%)" }} />
 
-      {/* 2. Картинка — уменьшена, лицо целиком, по центру */}
-      <div className="absolute inset-0 w-full h-full flex items-center justify-center">
+      {/* 2. Картинка — розовый фон убран через multiply, остаётся только хром */}
+      <div className="absolute inset-0 w-full h-full flex items-center justify-center" style={{ mixBlendMode: "multiply" }}>
         <img
           src={FACE_IMG}
           alt="chrome face"
@@ -54,6 +54,7 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
             width: "auto",
             objectFit: "contain",
             objectPosition: "center",
+            mixBlendMode: "multiply",
           }}
         />
       </div>
