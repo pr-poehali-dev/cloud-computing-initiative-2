@@ -47,7 +47,7 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
           src={FACE_IMG}
           alt="chrome face"
           style={{
-            height: "90%",
+            height: "130%",
             width: "auto",
             objectFit: "contain",
           }}
