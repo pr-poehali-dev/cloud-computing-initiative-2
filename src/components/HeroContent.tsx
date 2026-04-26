@@ -1,39 +1,39 @@
 export default function HeroContent() {
   return (
-    <main className="absolute bottom-8 left-8 z-20 max-w-lg">
-      <div className="text-left">
-        <div
-          className="inline-flex items-center px-3 py-1 rounded-full bg-white/5 backdrop-blur-sm mb-4 relative"
-          style={{
-            filter: "url(#glass-effect)",
-          }}
+    <main className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6">
+      {/* Logo / Club Name */}
+      <div className="mb-6">
+        <h1
+          className="text-[clamp(5rem,18vw,14rem)] leading-none tracking-[0.15em] text-white uppercase"
+          style={{ fontFamily: "'Tenor Sans', sans-serif", letterSpacing: "0.2em" }}
         >
-          <div className="absolute top-0 left-1 right-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full" />
-          <span className="text-white/90 text-xs font-light relative z-10">Закрытый женский клуб МОЖНО · Только для своих</span>
-        </div>
-
-        {/* Main Heading */}
-        <h1 className="text-5xl md:text-6xl md:leading-16 tracking-tight font-light text-white mb-4">
-          <span className="font-medium italic">Место, где</span> рождаются
-          <br />
-          <span className="font-light tracking-tight text-white">незабываемые события</span>
+          МОЖНО
         </h1>
+      </div>
 
-        {/* Description */}
-        <p className="text-xs font-light text-white/70 mb-4 leading-relaxed">
-          Камерные встречи, мастер-классы, нетворкинг и вечера для женщин, которые ценят качество и атмосферу.
-          Запишитесь на ближайшее мероприятие и станьте частью нашего сообщества.
-        </p>
+      {/* Divider */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="h-px w-16 bg-white/30" />
+        <span className="text-white/50 text-[10px] uppercase tracking-[0.3em]">женский клуб</span>
+        <div className="h-px w-16 bg-white/30" />
+      </div>
 
-        {/* Buttons */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <button className="px-8 py-3 rounded-full bg-transparent border border-white/30 text-white font-normal text-xs transition-all duration-200 hover:bg-white/10 hover:border-white/50 cursor-pointer">
-            Все мероприятия
-          </button>
-          <button className="px-8 py-3 rounded-full bg-white text-black font-normal text-xs transition-all duration-200 hover:bg-white/90 cursor-pointer">
-            Вступить в клуб
-          </button>
-        </div>
+      {/* Slogan */}
+      <p
+        className="text-white/85 text-xl md:text-2xl font-light italic max-w-md leading-relaxed"
+        style={{ fontFamily: "'Cormorant Garamond', serif" }}
+      >
+        Каждой женщине нужна&nbsp;женщина рядом
+      </p>
+
+      {/* Buttons */}
+      <div className="flex items-center gap-4 flex-wrap justify-center mt-10">
+        <button className="px-8 py-3 rounded-full bg-transparent border border-white/30 text-white font-normal text-xs transition-all duration-200 hover:bg-white/10 hover:border-white/50 cursor-pointer tracking-widest uppercase">
+          Мероприятия
+        </button>
+        <button className="px-8 py-3 rounded-full bg-white/90 backdrop-blur-sm text-black font-normal text-xs transition-all duration-200 hover:bg-white cursor-pointer tracking-widest uppercase">
+          Вступить в клуб
+        </button>
       </div>
     </main>
   )
