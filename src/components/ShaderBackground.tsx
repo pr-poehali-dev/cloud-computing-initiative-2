@@ -1,6 +1,7 @@
 import type React from "react"
 import { useEffect, useRef } from "react"
-import { Swirl, GodRays, LiquidMetal } from "@paper-design/shaders-react"
+import { Swirl, LiquidMetal } from "@paper-design/shaders-react"
+import FaceSilhouette from "@/components/FaceSilhouette"
 
 interface ShaderBackgroundProps {
   children: React.ReactNode
@@ -118,20 +119,8 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         }}
       />
 
-      {/* 4. GodRays — луч прожектора сверху, движется через лицо */}
-      <GodRays
-        className="absolute inset-0 w-full h-full"
-        colorBack="#00000000"
-        colorBloom="#ffe8f4"
-        colors={["#ffffff", "#ffb6d9", "#ff69b4"]}
-        spotty={0.3}
-        midSize={0.5}
-        midIntensity={0.6}
-        frequency={0.8}
-        density={0.6}
-        bloom={1.2}
-        speed={0.25}
-      />
+      {/* 4. SVG-лицо с чертами */}
+      <FaceSilhouette />
 
       {/* 5. Финальный виньет для глубины */}
       <div
