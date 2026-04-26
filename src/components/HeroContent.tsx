@@ -4,13 +4,15 @@ export default function HeroContent() {
       {/* Logo / Club Name */}
       <div className="mb-4">
         <h1
-          className="text-[clamp(3rem,12vw,10rem)] leading-none text-white uppercase"
+          className="leading-none text-white uppercase w-full"
           style={{
             fontFamily: "'Montserrat', sans-serif",
             fontWeight: 300,
             fontStyle: "normal",
-            letterSpacing: "0.35em",
+            fontSize: "clamp(3rem, 18.5vw, 99vw)",
+            letterSpacing: "0.3em",
             textShadow: "0 2px 40px rgba(0,0,0,0.18)",
+            whiteSpace: "nowrap",
           }}
         >
           МОЖНО
