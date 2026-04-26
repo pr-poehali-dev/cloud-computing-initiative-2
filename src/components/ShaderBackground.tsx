@@ -41,57 +41,50 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         </defs>
       </svg>
 
-      {/* 1. Фоновое фото — хромовое лицо */}
-      <div
-        className="absolute inset-0 w-full h-full"
-        style={{
-          backgroundImage: `url(${FACE_IMG})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center top",
-          backgroundRepeat: "no-repeat",
-        }}
-      />
+      {/* 1. Фоновый розовый Swirl */}
+      <div className="absolute inset-0 w-full h-full" style={{ background: "linear-gradient(160deg, #f9b8d4 0%, #f2a7c3 50%, #e8007a 100%)" }} />
 
-      {/* 2. LiquidMetal — перелив ПОВЕРХ лица, в форме эллипса лица */}
-      <div
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ clipPath: "ellipse(28% 38% at 52% 42%)" }}
-      >
-        <LiquidMetal
-          className="w-full h-full"
-          colorBack="#00000000"
-          colorTint="#e8c8d8"
-          softness={0.3}
-          repetition={2.5}
-          distortion={0.6}
-          contour={0.4}
-          shiftRed={0.04}
-          shiftBlue={-0.03}
-          speed={0.28}
+      {/* 2. Картинка — уменьшена, лицо целиком, по центру */}
+      <div className="absolute inset-0 w-full h-full flex items-center justify-center">
+        <img
+          src={FACE_IMG}
+          alt="chrome face"
+          style={{
+            height: "88%",
+            width: "auto",
+            objectFit: "contain",
+            objectPosition: "center",
+          }}
         />
       </div>
 
-      {/* 3. Второй слой LiquidMetal — более широкий, другой тон для глубины */}
+      {/* 3. LiquidMetal перелив поверх лица */}
       <div
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{
-          clipPath: "ellipse(28% 38% at 52% 42%)",
-          mixBlendMode: "screen",
-          opacity: 0.45,
-        }}
+        className="absolute inset-0 w-full h-full pointer-events-none flex items-center justify-center"
       >
-        <LiquidMetal
-          className="w-full h-full"
-          colorBack="#00000000"
-          colorTint="#ffffff"
-          softness={0.5}
-          repetition={1.8}
-          distortion={0.35}
-          contour={0.7}
-          shiftRed={-0.02}
-          shiftBlue={0.05}
-          speed={0.18}
-        />
+        <div
+          style={{
+            height: "88%",
+            aspectRatio: "0.57",
+            clipPath: "ellipse(42% 48% at 52% 44%)",
+            mixBlendMode: "screen",
+            opacity: 0.55,
+          }}
+          className="relative"
+        >
+          <LiquidMetal
+            className="w-full h-full"
+            colorBack="#00000000"
+            colorTint="#ffd6ec"
+            softness={0.4}
+            repetition={2.2}
+            distortion={0.55}
+            contour={0.5}
+            shiftRed={0.04}
+            shiftBlue={-0.03}
+            speed={0.26}
+          />
+        </div>
       </div>
 
       {/* 4. Лёгкий розовый оверлей по краям для атмосферы */}
