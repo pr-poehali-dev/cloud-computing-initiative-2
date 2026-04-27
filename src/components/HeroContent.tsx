@@ -1,10 +1,10 @@
 export default function HeroContent() {
   return (
-    <main className="absolute inset-0 z-20 flex flex-col items-center justify-start text-center px-6 pt-[12vh]">
+    <main className="absolute inset-0 z-20 flex flex-col items-center justify-start text-center px-6 pt-[6vh]">
       {/* Tagline plate */}
-      <div className="mb-6 px-6 py-2 border border-white/25 backdrop-blur-sm bg-white/5">
+      <div className="mb-5 px-7 py-2.5 rounded-full border border-white/30 bg-black/45 backdrop-blur-md fade-in-up">
         <span
-          className="text-white/90 uppercase block"
+          className="text-white uppercase block"
           style={{
             fontFamily: "'Montserrat', sans-serif",
             fontWeight: 200,
@@ -12,12 +12,12 @@ export default function HeroContent() {
             letterSpacing: "0.4em",
           }}
         >
-          Каждой женщине — всё
+          Каждой женщине всё
         </span>
       </div>
 
       {/* Logo / Club Name */}
-      <div className="mb-4">
+      <div className="mb-4 fade-in-up-delay">
         <h1
           className="leading-none uppercase w-full shine-text"
           style={{
@@ -33,23 +33,6 @@ export default function HeroContent() {
           МОЖНО
         </h1>
       </div>
-
-      {/* Divider */}
-      <div className="flex items-center gap-4 mb-5">
-        <div className="h-px w-16 bg-white/30" />
-        <span className="text-white/55 text-[10px] uppercase tracking-[0.35em]" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>
-          женский клуб
-        </span>
-        <div className="h-px w-16 bg-white/30" />
-      </div>
-
-      {/* Slogan */}
-      <p
-        className="text-white/85 text-xl md:text-2xl font-light italic max-w-md leading-relaxed"
-        style={{ fontFamily: "'Cormorant Garamond', serif" }}
-      >
-        Каждой женщине нужна&nbsp;женщина рядом
-      </p>
 
       {/* Buttons */}
       <div className="flex items-center gap-4 flex-wrap justify-center mt-10">
