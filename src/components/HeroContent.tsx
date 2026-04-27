@@ -1,17 +1,32 @@
 export default function HeroContent() {
   return (
-    <main className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-6">
+    <main className="absolute inset-0 z-20 flex flex-col items-center justify-start text-center px-6 pt-[12vh]">
+      {/* Tagline plate */}
+      <div className="mb-6 px-6 py-2 border border-white/25 backdrop-blur-sm bg-white/5">
+        <span
+          className="text-white/90 uppercase block"
+          style={{
+            fontFamily: "'Montserrat', sans-serif",
+            fontWeight: 200,
+            fontSize: "clamp(0.7rem, 1.1vw, 0.95rem)",
+            letterSpacing: "0.4em",
+          }}
+        >
+          Каждой женщине — всё
+        </span>
+      </div>
+
       {/* Logo / Club Name */}
       <div className="mb-4">
         <h1
-          className="leading-none text-white uppercase w-full"
+          className="leading-none uppercase w-full shine-text"
           style={{
             fontFamily: "'Montserrat', sans-serif",
-            fontWeight: 300,
+            fontWeight: 400,
             fontStyle: "normal",
             fontSize: "clamp(3rem, 18.5vw, 99vw)",
             letterSpacing: "0.3em",
-            textShadow: "0 2px 40px rgba(0,0,0,0.18)",
+            filter: "drop-shadow(0 2px 40px rgba(0,0,0,0.18))",
             whiteSpace: "nowrap",
           }}
         >
