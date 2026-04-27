@@ -8,7 +8,6 @@ const Index = () => {
   return (
     <div className="bg-black">
       <ShaderBackground>
-        <Header />
         <HeroContent />
         <PulsingCircle />
       </ShaderBackground>
