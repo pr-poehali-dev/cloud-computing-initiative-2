@@ -1,5 +1,4 @@
 import { PulsingBorder } from "@paper-design/shaders-react"
-import { motion } from "framer-motion"
 
 export default function HeroContent() {
   return (
@@ -44,67 +43,30 @@ export default function HeroContent() {
           Мероприятия
         </button>
 
-        {/* Join button with rotating glowing border */}
+        {/* Join button with shimmering pulsing border */}
         <div className="relative inline-flex items-center justify-center">
-          {/* Pulsing animated border behind the button */}
           <PulsingBorder
             colors={["#FFB6C1", "#E77EDC", "#C4547D", "#FF85A1", "#F8BBD9"]}
             colorBack="#00000000"
-            speed={1.5}
+            speed={1.8}
             roundness={1}
-            thickness={0.06}
-            softness={0.25}
-            intensity={5}
-            spotsPerColor={5}
-            spotSize={0.1}
-            pulse={0.12}
-            smoke={0.5}
+            thickness={0.18}
+            softness={0.35}
+            intensity={6}
+            spotsPerColor={6}
+            spotSize={0.12}
+            pulse={0.15}
+            smoke={0.6}
             smokeSize={4}
             style={{
               position: "absolute",
-              inset: "-8px",
-              width: "calc(100% + 16px)",
-              height: "calc(100% + 16px)",
+              inset: "-10px",
+              width: "calc(100% + 20px)",
+              height: "calc(100% + 20px)",
               borderRadius: "9999px",
               pointerEvents: "none",
             }}
           />
-
-          {/* Rotating text around the button */}
-          <motion.svg
-            className="absolute pointer-events-none"
-            viewBox="0 0 400 120"
-            preserveAspectRatio="none"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-            style={{
-              width: "calc(100% + 80px)",
-              height: "calc(100% + 80px)",
-              left: "-40px",
-              top: "-40px",
-            }}
-          >
-            <defs>
-              <path
-                id="joinPath"
-                d="M 60,60 a 140,40 0 1,1 280,0 a 140,40 0 1,1 -280,0"
-                fill="none"
-              />
-            </defs>
-            <text
-              className="fill-white/85"
-              style={{
-                fontFamily: "'Montserrat', sans-serif",
-                fontSize: "11px",
-                letterSpacing: "0.35em",
-                textTransform: "uppercase",
-              }}
-            >
-              <textPath href="#joinPath" startOffset="0%">
-                · нажми сюда · стань частью клуба · нажми сюда · стань частью клуба
-              </textPath>
-            </text>
-          </motion.svg>
 
           <button className="relative z-10 px-12 py-5 rounded-full bg-white/95 backdrop-blur-sm text-black font-normal text-sm transition-all duration-200 hover:bg-white cursor-pointer tracking-[0.25em] uppercase">
             Вступить в клуб
