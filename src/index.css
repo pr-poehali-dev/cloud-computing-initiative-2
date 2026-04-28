@@ -51,17 +51,49 @@
     animation: fadeInUp 1.4s ease-out 0.4s forwards;
   }
 
-  @keyframes patternRise {
+  @keyframes pillEdgeRunner {
     0% {
-      background-position: 0 0;
+      background-position: 0% 50%;
     }
     100% {
-      background-position: 0 -1440px;
+      background-position: 200% 50%;
     }
   }
 
-  .premium-pattern {
-    animation: patternRise 25s linear infinite;
+  .pill-running-glow {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .pill-running-glow::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 9999px;
+    padding: 2px;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.95) 18%,
+      rgba(255, 220, 240, 1) 32%,
+      rgba(255, 255, 255, 0.95) 46%,
+      rgba(255, 255, 255, 0.1) 64%,
+      rgba(255, 255, 255, 0.1) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: pillEdgeRunner 3s linear infinite;
+    pointer-events: none;
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.7))
+      drop-shadow(0 0 14px rgba(255, 200, 230, 0.45));
+    z-index: 2;
   }
 
   /* Ring-shaped mask: shows the shimmering spots only along the pill contour */

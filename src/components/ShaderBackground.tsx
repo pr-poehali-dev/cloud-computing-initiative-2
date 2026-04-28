@@ -82,16 +82,25 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         </div>
       </div>
 
-      {/* 4. Premium animated pattern — rises from bottom to top */}
+      {/* 4. Sepia warm tint — pronounced, no darkening */}
       <div
-        className="absolute inset-0 w-full h-full pointer-events-none premium-pattern"
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(196,140,70,0.55) 0%, rgba(176,118,55,0.5) 50%, rgba(160,100,45,0.55) 100%)",
+          mixBlendMode: "color",
+        }}
+      />
+
+      {/* 5. Sepia grain texture */}
+      <div
+        className="absolute inset-0 w-full h-full pointer-events-none"
         style={{
           backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'><defs><filter id='g' x='-50%25' y='-50%25' width='200%25' height='200%25'><feGaussianBlur stdDeviation='2.5' result='b'/><feMerge><feMergeNode in='b'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><g filter='url(%23g)' fill='none' stroke='%23ffffff' stroke-width='1.3' opacity='0.85'><circle cx='180' cy='180' r='70'/><circle cx='180' cy='180' r='40'/><path d='M180 110 C 212 142, 212 218, 180 250 C 148 218, 148 142, 180 110 Z'/><path d='M110 180 C 142 148, 218 148, 250 180 C 218 212, 142 212, 110 180 Z'/><circle cx='180' cy='180' r='6' fill='%23ffffff' opacity='0.7'/><circle cx='0' cy='0' r='5' fill='%23ffffff' opacity='0.55'/><circle cx='360' cy='0' r='5' fill='%23ffffff' opacity='0.55'/><circle cx='0' cy='360' r='5' fill='%23ffffff' opacity='0.55'/><circle cx='360' cy='360' r='5' fill='%23ffffff' opacity='0.55'/><path d='M0 180 L 56 180 M 304 180 L 360 180 M 180 0 L 180 56 M 180 304 L 180 360'/><circle cx='90' cy='90' r='14'/><circle cx='270' cy='90' r='14'/><circle cx='90' cy='270' r='14'/><circle cx='270' cy='270' r='14'/></g></svg>\")",
-          backgroundSize: "360px 360px",
-          backgroundRepeat: "repeat",
-          opacity: 0.38,
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.55  0 0 0 0 0.4  0 0 0 0 0.22  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+          backgroundSize: "220px 220px",
           mixBlendMode: "soft-light",
+          opacity: 0.7,
         }}
       />
 

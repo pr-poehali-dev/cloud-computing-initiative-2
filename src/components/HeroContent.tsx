@@ -47,22 +47,18 @@ export default function HeroContent() {
         </div>
 
         {/* Tagline plate */}
-        <div className="relative inline-flex items-center justify-center mb-3 fade-in-up">
-          <div aria-hidden className="absolute -inset-3 rounded-full pointer-events-none join-soft-glow" />
-          <div aria-hidden className="absolute -inset-[3px] rounded-full pointer-events-none pink-shimmer-border" />
-          <div className="relative z-10 px-9 py-3.5 rounded-full bg-white/50 backdrop-blur-sm">
-            <span
-              className="text-black uppercase block"
-              style={{
-                fontFamily: "'Montserrat', sans-serif",
-                fontWeight: 400,
-                fontSize: "clamp(0.8rem, 1.25vw, 1.1rem)",
-                letterSpacing: "0.4em",
-              }}
-            >
-              Каждой женщине всё
-            </span>
-          </div>
+        <div className="mb-3 px-9 py-3 rounded-full border border-white/30 bg-black/45 backdrop-blur-md fade-in-up">
+          <span
+            className="text-white uppercase block"
+            style={{
+              fontFamily: "'Montserrat', sans-serif",
+              fontWeight: 300,
+              fontSize: "clamp(0.8rem, 1.25vw, 1.1rem)",
+              letterSpacing: "0.4em",
+            }}
+          >
+            Каждой женщине всё
+          </span>
         </div>
 
         {/* Logo / Club Name */}
@@ -85,9 +81,7 @@ export default function HeroContent() {
 
         {/* Buttons — single line */}
         <div className="flex items-center gap-3 sm:gap-4 justify-center flex-nowrap overflow-x-auto px-6 mt-auto">
-          <div className="relative inline-flex items-center justify-center flex-shrink-0">
-            <div aria-hidden className="absolute -inset-3 rounded-full pointer-events-none join-soft-glow" />
-            <div aria-hidden className="absolute -inset-[3px] rounded-full pointer-events-none pink-shimmer-border" />
+          <div className="pill-running-glow rounded-full flex-shrink-0">
             <button
               onClick={() => setEventsOpen(true)}
               className="relative z-10 px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-white/50 backdrop-blur-sm text-black font-normal text-xs sm:text-sm transition-all duration-200 hover:bg-white/70 cursor-pointer tracking-[0.25em] uppercase whitespace-nowrap"
@@ -96,9 +90,7 @@ export default function HeroContent() {
             </button>
           </div>
 
-          <div className="relative inline-flex items-center justify-center flex-shrink-0">
-            <div aria-hidden className="absolute -inset-3 rounded-full pointer-events-none join-soft-glow" />
-            <div aria-hidden className="absolute -inset-[3px] rounded-full pointer-events-none pink-shimmer-border" />
+          <div className="pill-running-glow rounded-full flex-shrink-0">
             <button
               onClick={handleJoinClick}
               className="relative z-10 px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-white/50 backdrop-blur-sm text-black font-normal text-xs sm:text-sm transition-all duration-200 hover:bg-white/70 cursor-pointer tracking-[0.25em] uppercase whitespace-nowrap"
@@ -107,9 +99,7 @@ export default function HeroContent() {
             </button>
           </div>
 
-          <div className="relative inline-flex items-center justify-center flex-shrink-0">
-            <div aria-hidden className="absolute -inset-3 rounded-full pointer-events-none join-soft-glow" />
-            <div aria-hidden className="absolute -inset-[3px] rounded-full pointer-events-none pink-shimmer-border" />
+          <div className="pill-running-glow rounded-full flex-shrink-0">
             <Link
               to="/about"
               className="relative z-10 inline-flex items-center gap-2 px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-white/50 backdrop-blur-sm text-black font-normal text-xs sm:text-sm transition-all duration-200 hover:bg-white/70 cursor-pointer tracking-[0.25em] uppercase whitespace-nowrap"
@@ -120,19 +110,6 @@ export default function HeroContent() {
           </div>
         </div>
 
-        {!isAuthenticated && (
-          <div className="flex justify-center mt-4 px-6">
-            <button
-              onClick={() => {
-                setAuthMode("login")
-                setAuthOpen(true)
-              }}
-              className="text-white/80 hover:text-white text-xs uppercase tracking-[0.25em] underline-offset-4 hover:underline transition-colors"
-            >
-              Уже в клубе? Войти
-            </button>
-          </div>
-        )}
 
         {/* Bottom divider */}
         {upcoming.length > 0 && (
