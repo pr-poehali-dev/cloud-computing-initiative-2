@@ -43,30 +43,41 @@ export default function HeroContent() {
           Мероприятия
         </button>
 
-        {/* Join button with shimmering pulsing border */}
-        <div className="relative inline-flex items-center justify-center">
-          <PulsingBorder
-            colors={["#FFB6C1", "#E77EDC", "#C4547D", "#FF85A1", "#F8BBD9"]}
-            colorBack="#00000000"
-            speed={1.8}
-            roundness={1}
-            thickness={0.18}
-            softness={0.35}
-            intensity={6}
-            spotsPerColor={6}
-            spotSize={0.12}
-            pulse={0.15}
-            smoke={0.6}
-            smokeSize={4}
-            style={{
-              position: "absolute",
-              inset: "-10px",
-              width: "calc(100% + 20px)",
-              height: "calc(100% + 20px)",
-              borderRadius: "9999px",
-              pointerEvents: "none",
-            }}
+        {/* Join button with shimmering pulsing border along the pill contour */}
+        <div className="relative inline-flex items-center justify-center join-glow-wrap">
+          {/* Soft outer glow */}
+          <div
+            aria-hidden
+            className="absolute -inset-3 rounded-full pointer-events-none join-soft-glow"
           />
+
+          {/* Shimmering pink-magenta spots running along the pill contour */}
+          <div
+            aria-hidden
+            className="absolute -inset-[3px] rounded-full pointer-events-none overflow-hidden join-border-mask"
+          >
+            <PulsingBorder
+              colors={["#FFB6C1", "#E77EDC", "#C4547D", "#FF85A1", "#F8BBD9", "#FF4FA3"]}
+              colorBack="#00000000"
+              speed={2}
+              roundness={1}
+              thickness={1}
+              softness={0.8}
+              intensity={6}
+              spotsPerColor={8}
+              spotSize={0.18}
+              pulse={0.2}
+              smoke={0.7}
+              smokeSize={4}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                borderRadius: "9999px",
+              }}
+            />
+          </div>
 
           <button className="relative z-10 px-12 py-5 rounded-full bg-white/95 backdrop-blur-sm text-black font-normal text-sm transition-all duration-200 hover:bg-white cursor-pointer tracking-[0.25em] uppercase">
             Вступить в клуб

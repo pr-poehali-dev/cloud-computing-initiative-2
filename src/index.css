@@ -50,6 +50,42 @@
     opacity: 0;
     animation: fadeInUp 1.4s ease-out 0.4s forwards;
   }
+
+  /* Ring-shaped mask: shows the shimmering spots only along the pill contour */
+  .join-border-mask {
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    padding: 4px;
+  }
+
+  .join-soft-glow {
+    background: radial-gradient(
+      ellipse at center,
+      rgba(231, 126, 220, 0.55) 0%,
+      rgba(255, 79, 163, 0.35) 35%,
+      rgba(196, 84, 125, 0) 70%
+    );
+    filter: blur(14px);
+    animation: joinGlowPulse 2.6s ease-in-out infinite;
+  }
+
+  @keyframes joinGlowPulse {
+    0%,
+    100% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.06);
+    }
+  }
 }
 
 @layer base {
