@@ -188,6 +188,26 @@
       transform: scale(1.06);
     }
   }
+
+  .pulse-title {
+    animation: titlePulse 3.2s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform, filter;
+  }
+
+  @keyframes titlePulse {
+    0%,
+    100% {
+      transform: scale(1);
+      filter: drop-shadow(0 2px 40px rgba(0, 0, 0, 0.18))
+        drop-shadow(0 0 30px rgba(255, 130, 180, 0.25));
+    }
+    50% {
+      transform: scale(1.035);
+      filter: drop-shadow(0 2px 40px rgba(0, 0, 0, 0.18))
+        drop-shadow(0 0 60px rgba(255, 79, 163, 0.55));
+    }
+  }
 }
 
 @layer base {

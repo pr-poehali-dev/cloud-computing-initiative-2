@@ -1,8 +1,10 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import EventsModal from "@/components/EventsModal"
 import AuthModal, { AuthMode } from "@/components/AuthModal"
 import ProfileModal from "@/components/ProfileModal"
 import { useAuth } from "@/contexts/AuthContext"
+import Icon from "@/components/ui/icon"
 
 export default function HeroContent() {
   const { isAuthenticated } = useAuth()
@@ -41,7 +43,7 @@ export default function HeroContent() {
         {/* Logo / Club Name */}
         <div className="fade-in-up-delay w-full flex justify-center overflow-hidden">
           <h1
-            className="leading-none uppercase shine-text inline-block"
+            className="leading-none uppercase shine-text pulse-title inline-block"
             style={{
               fontFamily: "'Montserrat', sans-serif",
               fontWeight: 400,
@@ -49,13 +51,21 @@ export default function HeroContent() {
               fontSize: "clamp(3rem, 16vw, 99vw)",
               letterSpacing: "0.25em",
               paddingLeft: "0.25em",
-              filter: "drop-shadow(0 2px 40px rgba(0,0,0,0.18))",
               whiteSpace: "nowrap",
             }}
           >
             МОЖНО
           </h1>
         </div>
+
+        {/* About club link */}
+        <Link
+          to="/about"
+          className="mt-1 inline-flex items-center gap-2 px-6 py-2.5 rounded-full border border-white/30 bg-black/35 backdrop-blur-md text-white text-xs uppercase tracking-[0.3em] hover:bg-black/55 hover:border-white/50 transition-all fade-in-up-delay"
+        >
+          <Icon name="Info" size={14} />
+          Узнать о клубе
+        </Link>
 
         {/* Buttons */}
         <div className="flex items-center gap-5 flex-wrap justify-center mt-auto">
