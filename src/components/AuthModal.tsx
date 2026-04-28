@@ -23,9 +23,11 @@ interface Props {
 }
 
 export default function AuthModal({ open, onOpenChange, initialMode = "login", onSuccess }: Props) {
-  const { login, register } = useAuth()
+  const { login, register, findInviterName } = useAuth()
   const [mode, setMode] = useState<AuthMode>(initialMode)
   const [submitting, setSubmitting] = useState(false)
+  const [refCode, setRefCode] = useState<string>("")
+  const [inviterName, setInviterName] = useState<string | null>(null)
 
   // Login state
   const [email, setEmail] = useState("")
@@ -47,6 +49,18 @@ export default function AuthModal({ open, onOpenChange, initialMode = "login", o
   useEffect(() => {
     if (open) setMode(initialMode)
   }, [open, initialMode])
+
+  useEffect(() => {
+    if (!open) return
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get("ref") || localStorage.getItem("mojno_pending_ref") || ""
+    if (code) {
+      setRefCode(code)
+      localStorage.setItem("mojno_pending_ref", code)
+      const name = findInviterName(code)
+      setInviterName(name)
+    }
+  }, [open, findInviterName])
 
   const reset = () => {
     setEmail("")
@@ -72,10 +86,17 @@ export default function AuthModal({ open, onOpenChange, initialMode = "login", o
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-    const res = await register(reg)
+    const res = await register({ ...reg, referralCode: refCode || undefined })
     setSubmitting(false)
     if (res.ok) {
-      toast.success("Анкета принята! Добро пожаловать в клуб.")
+      if (inviterName) {
+        toast.success(`Добро пожаловать! Подруге ${inviterName} начислены бонусы.`)
+      } else {
+        toast.success("Анкета принята! Добро пожаловать в клуб.")
+      }
+      localStorage.removeItem("mojno_pending_ref")
+      setRefCode("")
+      setInviterName(null)
       reset()
       onOpenChange(false)
       onSuccess?.()
@@ -134,6 +155,16 @@ export default function AuthModal({ open, onOpenChange, initialMode = "login", o
           </form>
         ) : (
           <form onSubmit={handleRegister} className="space-y-4 pt-3">
+            {inviterName && (
+              <div className="rounded-2xl bg-gradient-to-r from-pink-100 to-rose-50 border border-pink-200 px-4 py-3 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white flex items-center justify-center flex-shrink-0">
+                  <Icon name="Gift" size={16} />
+                </div>
+                <div className="text-sm text-black/80">
+                  Тебя пригласила <span className="font-medium">{inviterName}</span>. После регистрации ей упадут бонусные баллы.
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="rFirst">Имя</Label>
