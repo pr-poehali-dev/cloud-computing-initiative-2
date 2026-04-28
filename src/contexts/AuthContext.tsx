@@ -14,6 +14,7 @@ export interface User {
   referredBy?: string
   invitedCount: number
   points: number
+  balance: number
 }
 
 export const REFERRAL_BONUS = 100
@@ -23,7 +24,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>
   register: (
-    data: Omit<User, "joinedAt" | "referralCode" | "invitedCount" | "points" | "referredBy"> & {
+    data: Omit<User, "joinedAt" | "referralCode" | "invitedCount" | "points" | "referredBy" | "balance"> & {
       password: string
       referralCode?: string
     }
@@ -31,6 +32,12 @@ interface AuthContextType {
   logout: () => void
   updateProfile: (patch: Partial<User>) => void
   findInviterName: (code: string) => string | null
+  topUpBalance: (amount: number, opts?: { fromGift?: boolean; senderName?: string }) => void
+  topUpBalanceForCode: (
+    code: string,
+    amount: number,
+    senderName?: string
+  ) => { ok: boolean; recipientName?: string; error?: string }
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -68,6 +75,7 @@ const ensureUserDefaults = (u: StoredUser): StoredUser => ({
   referralCode: u.referralCode || generateReferralCode(u.firstName),
   invitedCount: typeof u.invitedCount === "number" ? u.invitedCount : 0,
   points: typeof u.points === "number" ? u.points : 0,
+  balance: typeof u.balance === "number" ? u.balance : 0,
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -135,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       referredBy: inviterEmail,
       invitedCount: 0,
       points: 0,
+      balance: 0,
     }
 
     const next = [...users, newUser]
@@ -187,8 +196,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const topUpBalance: AuthContextType["topUpBalance"] = (amount) => {
+    if (!user || amount <= 0) return
+    const newBalance = (user.balance || 0) + amount
+    updateProfile({ balance: newBalance })
+  }
+
+  const topUpBalanceForCode: AuthContextType["topUpBalanceForCode"] = (
+    code,
+    amount,
+    senderName
+  ) => {
+    const trimmed = (code || "").trim()
+    if (!trimmed) return { ok: false, error: "Не указана ссылка" }
+    if (amount <= 0) return { ok: false, error: "Неверная сумма" }
+    const users = readUsers()
+    const idx = users.findIndex(
+      (u) => (u.referralCode || "").toLowerCase() === trimmed.toLowerCase()
+    )
+    if (idx < 0) return { ok: false, error: "Получатель не найден" }
+    const recipient = ensureUserDefaults(users[idx])
+    users[idx] = { ...recipient, balance: (recipient.balance || 0) + amount }
+    writeUsers(users)
+    // If the recipient is currently logged in (e.g., topping up own account through gift),
+    // refresh session
+    if (user && user.email === recipient.email) {
+      updateProfile({ balance: (recipient.balance || 0) + amount })
+    }
+    void senderName
+    return {
+      ok: true,
+      recipientName: `${recipient.firstName} ${recipient.lastName}`.trim(),
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updateProfile, findInviterName }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        login,
+        register,
+        logout,
+        updateProfile,
+        findInviterName,
+        topUpBalance,
+        topUpBalanceForCode,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

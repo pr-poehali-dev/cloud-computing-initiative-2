@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -9,31 +9,44 @@ import {
 import Icon from "@/components/ui/icon"
 import { useAuth, REFERRAL_BONUS } from "@/contexts/AuthContext"
 import { toast } from "sonner"
+import { CATEGORIES, type EventCategory } from "@/data/events"
+import TopUpModal from "@/components/TopUpModal"
 
 interface Props {
   open: boolean
   onOpenChange: (v: boolean) => void
 }
 
+interface StoredRegistration {
+  email: string
+  eventTitle: string
+  category: EventCategory
+  date: string
+  registeredAt: string
+}
+
 export default function ProfileModal({ open, onOpenChange }: Props) {
   const { user, logout, updateProfile } = useAuth()
+  const [topUpOpen, setTopUpOpen] = useState(false)
 
-  // Sync stats from storage when modal opens (in case someone registered via my link)
+  // Sync stats from storage when modal opens (in case someone registered via my link or sent gift)
   useEffect(() => {
     if (!open || !user) return
     try {
       const all = JSON.parse(localStorage.getItem("mojno_users") || "[]") as Array<
-        { email: string; invitedCount?: number; points?: number }
+        { email: string; invitedCount?: number; points?: number; balance?: number }
       >
       const fresh = all.find((u) => u.email === user.email)
       if (
         fresh &&
         ((fresh.invitedCount ?? 0) !== (user.invitedCount ?? 0) ||
-          (fresh.points ?? 0) !== (user.points ?? 0))
+          (fresh.points ?? 0) !== (user.points ?? 0) ||
+          (fresh.balance ?? 0) !== (user.balance ?? 0))
       ) {
         updateProfile({
           invitedCount: fresh.invitedCount ?? 0,
           points: fresh.points ?? 0,
+          balance: fresh.balance ?? 0,
         })
       }
     } catch {
@@ -41,6 +54,28 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Compute favourite categories from event registrations
+  const { favourites, totalRegistrations } = useMemo(() => {
+    if (!user) return { favourites: [], totalRegistrations: 0 }
+    try {
+      const all: StoredRegistration[] = JSON.parse(
+        localStorage.getItem("mojno_event_registrations") || "[]"
+      )
+      const my = all.filter((r) => r.email === user.email)
+      const counts = new Map<EventCategory, number>()
+      my.forEach((r) => counts.set(r.category, (counts.get(r.category) || 0) + 1))
+      const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3)
+      return {
+        favourites: sorted.map(([cat, count]) => ({ category: cat, count })),
+        totalRegistrations: my.length,
+      }
+    } catch {
+      return { favourites: [], totalRegistrations: 0 }
+    }
+    // recompute when modal opens
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user?.email])
 
   if (!user) return null
 
@@ -97,6 +132,29 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
           </div>
         </div>
 
+        {/* Balance block */}
+        <div className="mt-3 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white p-5 shadow-md">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.22em] text-white/80">Баланс</div>
+              <div className="text-3xl font-semibold mt-1" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                {(user.balance || 0).toLocaleString("ru-RU")} ₽
+              </div>
+              <div className="text-[11px] text-white/70 mt-1">
+                Используется при записи на мероприятия
+              </div>
+            </div>
+            <Icon name="Wallet" size={36} className="text-white/85" />
+          </div>
+          <button
+            onClick={() => setTopUpOpen(true)}
+            className="mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-white text-pink-700 hover:bg-white/90 text-xs uppercase tracking-[0.22em] font-medium transition-colors"
+          >
+            <Icon name="Plus" size={14} />
+            Пополнить баланс
+          </button>
+        </div>
+
         {/* Contacts */}
         <div className="grid sm:grid-cols-2 gap-3 pt-4">
           <InfoRow icon="Mail" label="Email" value={user.email} />
@@ -113,9 +171,56 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
 
         {/* Quick stats */}
         <div className="grid grid-cols-3 gap-3 pt-3">
-          <Stat icon="CalendarCheck" value="0" label="Записей" />
+          <Stat icon="CalendarCheck" value={String(totalRegistrations)} label="Записей" />
           <Stat icon="UserPlus" value={String(user.invitedCount || 0)} label="Подруг приглашено" />
           <Stat icon="Sparkles" value={String(user.points || 0)} label="Баллов" />
+        </div>
+
+        {/* Favourite categories */}
+        <div className="mt-4 rounded-2xl border border-black/10 bg-white p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Icon name="Heart" size={14} className="text-pink-600" />
+            <div className="text-[11px] uppercase tracking-[0.18em] text-black/60">
+              Любимые направления
+            </div>
+          </div>
+          {favourites.length > 0 ? (
+            <div className="space-y-2.5">
+              {favourites.map((f) => {
+                const meta = CATEGORIES.find((c) => c.name === f.category)!
+                const max = favourites[0].count
+                const pct = Math.round((f.count / max) * 100)
+                return (
+                  <div key={f.category}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span
+                          className={`inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br ${meta.color} text-white`}
+                        >
+                          <Icon name={meta.icon} size={12} />
+                        </span>
+                        <span className="text-black/80">{f.category}</span>
+                      </div>
+                      <span className="text-xs text-black/55">
+                        {f.count}{" "}
+                        {f.count === 1 ? "посещение" : f.count < 5 ? "посещения" : "посещений"}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-black/5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full bg-gradient-to-r ${meta.color}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-black/55 leading-relaxed">
+              Пока нет записей. После первых посещений мы покажем твои любимые направления.
+            </p>
+          )}
         </div>
 
         {/* Referral block */}
@@ -172,6 +277,7 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
           Выйти
         </button>
       </DialogContent>
+      <TopUpModal open={topUpOpen} onOpenChange={setTopUpOpen} />
     </Dialog>
   )
 }

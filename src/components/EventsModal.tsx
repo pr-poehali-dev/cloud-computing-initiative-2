@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Icon from "@/components/ui/icon"
 import { toast } from "sonner"
 import { EVENTS, CATEGORIES, today, ymd, type EventCategory as Category } from "@/data/events"
+import { useAuth } from "@/contexts/AuthContext"
 
 const REMINDER_OPTIONS = [
   { value: "15m", label: "За 15 минут" },
@@ -32,7 +33,18 @@ interface Props {
 
 type View = "list" | "register"
 
+const REGISTRATIONS_KEY = "mojno_event_registrations"
+
+interface StoredRegistration {
+  email: string
+  eventTitle: string
+  category: Category
+  date: string
+  registeredAt: string
+}
+
 export default function EventsModal({ open, onOpenChange }: Props) {
+  const { user } = useAuth()
   const [activeCategories, setActiveCategories] = useState<Set<Category>>(new Set())
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today)
   const [view, setView] = useState<View>("list")
@@ -85,6 +97,26 @@ export default function EventsModal({ open, onOpenChange }: Props) {
     if (!dayEvent) return
     const reminderLabel = REMINDER_OPTIONS.find((r) => r.value === reminder)?.label
     const channel = notifyMethod === "email" ? `на почту ${notifyEmail}` : `на телефон ${notifyPhone}`
+
+    // Persist registration to count category preferences in profile
+    if (user) {
+      try {
+        const list: StoredRegistration[] = JSON.parse(
+          localStorage.getItem(REGISTRATIONS_KEY) || "[]"
+        )
+        list.push({
+          email: user.email,
+          eventTitle: dayEvent.title,
+          category: dayEvent.category,
+          date: dayEvent.date,
+          registeredAt: new Date().toISOString(),
+        })
+        localStorage.setItem(REGISTRATIONS_KEY, JSON.stringify(list))
+      } catch {
+        /* ignore */
+      }
+    }
+
     toast.success(`Переходим к оплате «${dayEvent.title}»`, {
       description: `Напомним ${reminderLabel?.toLowerCase()} ${channel}.`,
     })
