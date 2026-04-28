@@ -87,43 +87,11 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         className="absolute inset-0 w-full h-full pointer-events-none premium-pattern"
         style={{
           backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><g fill='none' stroke='%23ffffff' stroke-width='0.7' opacity='0.55'><circle cx='100' cy='100' r='38'/><circle cx='100' cy='100' r='22'/><path d='M100 62 C 118 80, 118 120, 100 138 C 82 120, 82 80, 100 62 Z'/><path d='M62 100 C 80 82, 120 82, 138 100 C 120 118, 80 118, 62 100 Z'/><circle cx='100' cy='100' r='4' fill='%23ffffff' opacity='0.5'/><circle cx='0' cy='0' r='3' fill='%23ffffff' opacity='0.4'/><circle cx='200' cy='0' r='3' fill='%23ffffff' opacity='0.4'/><circle cx='0' cy='200' r='3' fill='%23ffffff' opacity='0.4'/><circle cx='200' cy='200' r='3' fill='%23ffffff' opacity='0.4'/><path d='M0 100 L 30 100 M 170 100 L 200 100 M 100 0 L 100 30 M 100 170 L 100 200'/></g></svg>\")",
-          backgroundSize: "200px 200px",
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='360' viewBox='0 0 360 360'><g fill='none' stroke='%23ffffff' stroke-width='1.1' opacity='0.7'><circle cx='180' cy='180' r='70'/><circle cx='180' cy='180' r='40'/><path d='M180 110 C 212 142, 212 218, 180 250 C 148 218, 148 142, 180 110 Z'/><path d='M110 180 C 142 148, 218 148, 250 180 C 218 212, 142 212, 110 180 Z'/><circle cx='180' cy='180' r='6' fill='%23ffffff' opacity='0.55'/><circle cx='0' cy='0' r='5' fill='%23ffffff' opacity='0.45'/><circle cx='360' cy='0' r='5' fill='%23ffffff' opacity='0.45'/><circle cx='0' cy='360' r='5' fill='%23ffffff' opacity='0.45'/><circle cx='360' cy='360' r='5' fill='%23ffffff' opacity='0.45'/><path d='M0 180 L 56 180 M 304 180 L 360 180 M 180 0 L 180 56 M 180 304 L 180 360'/><circle cx='90' cy='90' r='14'/><circle cx='270' cy='90' r='14'/><circle cx='90' cy='270' r='14'/><circle cx='270' cy='270' r='14'/></g></svg>\")",
+          backgroundSize: "360px 360px",
           backgroundRepeat: "repeat",
-          opacity: 0.18,
+          opacity: 0.32,
           mixBlendMode: "soft-light",
-        }}
-      />
-
-      {/* 5. Sepia grain — strengthened */}
-      <div
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.45  0 0 0 0 0.32  0 0 0 0 0.18  0 0 0 0.7 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
-          backgroundSize: "220px 220px",
-          mixBlendMode: "multiply",
-          opacity: 0.7,
-        }}
-      />
-
-      {/* 6. Sepia warm tint */}
-      <div
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(120,75,30,0.18) 0%, rgba(90,55,20,0.22) 50%, rgba(70,40,15,0.28) 100%)",
-          mixBlendMode: "multiply",
-        }}
-      />
-
-      {/* 7. Vignette */}
-      <div
-        className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse at center, rgba(112,66,20,0) 30%, rgba(60,30,8,0.45) 100%)",
-          mixBlendMode: "multiply",
         }}
       />
 

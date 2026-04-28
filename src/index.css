@@ -56,12 +56,12 @@
       background-position: 0 0;
     }
     100% {
-      background-position: 0 -800px;
+      background-position: 0 -1440px;
     }
   }
 
   .premium-pattern {
-    animation: patternRise 60s linear infinite;
+    animation: patternRise 25s linear infinite;
   }
 
   /* Ring-shaped mask: shows the shimmering spots only along the pill contour */
