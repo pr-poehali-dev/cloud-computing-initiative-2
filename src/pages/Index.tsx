@@ -1,6 +1,5 @@
 import ShaderBackground from "@/components/ShaderBackground"
 import HeroContent from "@/components/HeroContent"
-import EventsSection from "@/components/EventsSection"
 import Header from "@/components/Header"
 
 const Index = () => {
@@ -10,7 +9,6 @@ const Index = () => {
         <Header />
         <HeroContent />
       </ShaderBackground>
-      <EventsSection />
     </div>
   )
 }

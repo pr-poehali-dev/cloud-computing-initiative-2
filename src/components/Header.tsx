@@ -1,9 +1,29 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import Icon from "@/components/ui/icon"
 import { useAuth } from "@/contexts/AuthContext"
 import AuthModal, { AuthMode } from "@/components/AuthModal"
 import ProfileModal from "@/components/ProfileModal"
 import SocialModal from "@/components/SocialModal"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+const ABOUT_SECTIONS: { id: string; title: string; icon: string }[] = [
+  { id: "about", title: "О клубе", icon: "Sparkles" },
+  { id: "founder", title: "Владелица клуба", icon: "Crown" },
+  { id: "speakers", title: "Спикеры", icon: "Mic" },
+  { id: "events", title: "Мероприятия", icon: "CalendarHeart" },
+  { id: "residency", title: "Резидентство", icon: "Gem" },
+  { id: "gallery", title: "Галерея", icon: "Camera" },
+  { id: "testimonials", title: "Отзывы", icon: "Quote" },
+  { id: "cta", title: "Вступить в клуб", icon: "Heart" },
+]
 
 export default function Header() {
   const { user, isAuthenticated } = useAuth()
@@ -21,7 +41,39 @@ export default function Header() {
     <>
       <header className="absolute top-0 left-0 right-0 z-30 p-6">
         <div className="flex justify-between items-center">
-          <div className="text-white text-sm uppercase tracking-widest font-light">МОЖНО</div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/30 text-white text-xs uppercase tracking-[0.2em] transition-colors"
+                aria-label="Меню разделов"
+              >
+                <Icon name="Menu" size={16} />
+                <span className="hidden sm:inline">Меню</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="w-64 rounded-2xl border-pink-100 shadow-xl"
+            >
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.22em] text-pink-600">
+                Разделы клуба
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {ABOUT_SECTIONS.map((s) => (
+                <DropdownMenuItem key={s.id} asChild className="cursor-pointer">
+                  <Link
+                    to={`/about#${s.id}`}
+                    className="flex items-center gap-2.5 py-2"
+                  >
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white">
+                      <Icon name={s.icon} size={13} />
+                    </span>
+                    <span className="text-sm">{s.title}</span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <div className="flex items-center gap-3">
             <button

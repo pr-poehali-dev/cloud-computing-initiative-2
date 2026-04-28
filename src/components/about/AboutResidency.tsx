@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/carousel"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
+import SectionHeading from "@/components/about/SectionHeading"
 
 interface ResidencyPlan {
   id: string
@@ -94,25 +95,13 @@ export default function AboutResidency() {
   }
 
   return (
-    <section className="max-w-6xl mx-auto px-6 pb-16">
-      <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">
-        Резидентство клуба
-      </div>
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
-        <h2
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "clamp(2rem, 4vw, 3rem)",
-            fontWeight: 400,
-          }}
-        >
-          Стань частью клуба надолго
-        </h2>
-        <p className="max-w-md text-sm text-black/65 leading-relaxed">
-          Выбери срок — и получи неограниченный доступ к мероприятиям, кругам
-          поддержки и закрытым гостиным.
-        </p>
-      </div>
+    <section id="residency" className="max-w-6xl mx-auto px-6 pb-16 scroll-mt-24">
+      <SectionHeading
+        eyebrow="Резидентство клуба"
+        title="Стань частью клуба надолго"
+        icon="Crown"
+        description="Выбери срок — и получи неограниченный доступ к мероприятиям, кругам поддержки и закрытым гостиным."
+      />
 
       <Carousel opts={{ align: "start", loop: false }} className="relative">
         <CarouselContent className="-ml-4">

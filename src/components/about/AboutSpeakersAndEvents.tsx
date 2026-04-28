@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import Icon from "@/components/ui/icon"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { EVENTS, categoryMeta, type ClubEvent } from "@/data/events"
+import SectionHeading from "@/components/about/SectionHeading"
 
 const SPEAKERS = [
   {
@@ -31,14 +32,12 @@ export default function AboutSpeakersAndEvents() {
   return (
     <>
       {/* Speakers */}
-      <section className="max-w-6xl mx-auto px-6 pb-16">
-        <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">Спикеры клуба</div>
-        <h2
-          className="mb-8"
-          style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}
-        >
-          Те, кто делится опытом
-        </h2>
+      <section id="speakers" className="max-w-6xl mx-auto px-6 pb-16 scroll-mt-24">
+        <SectionHeading
+          eyebrow="Спикеры клуба"
+          title="Те, кто делится опытом"
+          icon="Mic"
+        />
         <div className="grid md:grid-cols-3 gap-6">
           {SPEAKERS.map((s) => (
             <div key={s.name} className="group rounded-3xl bg-white border border-black/5 overflow-hidden shadow-sm">
@@ -62,14 +61,13 @@ export default function AboutSpeakersAndEvents() {
       </section>
 
       {/* Our events */}
-      <section className="pb-16">
-        <div className="max-w-6xl mx-auto px-6 mb-6">
-          <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">Наши мероприятия</div>
-          <h2
-            style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}
-          >
-            Что мы проводим в клубе
-          </h2>
+      <section id="events" className="pb-16 scroll-mt-24">
+        <div className="max-w-6xl mx-auto px-6">
+          <SectionHeading
+            eyebrow="Наши мероприятия"
+            title="Что мы проводим в клубе"
+            icon="CalendarHeart"
+          />
         </div>
 
         <div className="overflow-x-auto scrollbar-thin pb-3">

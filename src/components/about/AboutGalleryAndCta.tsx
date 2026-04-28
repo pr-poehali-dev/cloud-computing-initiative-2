@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import Icon from "@/components/ui/icon"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import SectionHeading from "@/components/about/SectionHeading"
 
 const GALLERY = [
   "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/15422723-dc66-4444-9812-8306f234551a.jpg",
@@ -45,14 +46,12 @@ export default function AboutGalleryAndCta() {
   return (
     <>
       {/* Gallery */}
-      <section className="max-w-6xl mx-auto px-6 pb-20">
-        <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">Галерея</div>
-        <h2
-          className="mb-8"
-          style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}
-        >
-          Как проходят встречи
-        </h2>
+      <section id="gallery" className="max-w-6xl mx-auto px-6 pb-20 scroll-mt-24">
+        <SectionHeading
+          eyebrow="Галерея"
+          title="Как проходят встречи"
+          icon="Camera"
+        />
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
           {GALLERY.map((src, i) => (
             <button
@@ -71,14 +70,12 @@ export default function AboutGalleryAndCta() {
       </section>
 
       {/* Testimonials */}
-      <section className="max-w-6xl mx-auto px-6 pb-20">
-        <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">Отзывы участниц</div>
-        <h2
-          className="mb-8"
-          style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}
-        >
-          Что говорят девушки клуба
-        </h2>
+      <section id="testimonials" className="max-w-6xl mx-auto px-6 pb-20 scroll-mt-24">
+        <SectionHeading
+          eyebrow="Отзывы участниц"
+          title="Что говорят девушки клуба"
+          icon="Quote"
+        />
         <div className="grid md:grid-cols-2 gap-5">
           {TESTIMONIALS.map((t) => (
             <div
@@ -106,7 +103,7 @@ export default function AboutGalleryAndCta() {
       </section>
 
       {/* CTA */}
-      <section className="max-w-3xl mx-auto px-6 pb-24 text-center">
+      <section id="cta" className="max-w-3xl mx-auto px-6 pb-24 text-center scroll-mt-24">
         <h2
           className="mb-4"
           style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}

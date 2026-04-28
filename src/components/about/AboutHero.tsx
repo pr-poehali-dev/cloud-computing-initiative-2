@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
 import Icon from "@/components/ui/icon"
+import SectionHeading from "@/components/about/SectionHeading"
 
 const FOUNDER_PHOTO = "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/349d889f-422a-4043-8672-fc7de079d848.jpeg"
 
@@ -40,8 +41,11 @@ export default function AboutHero() {
       </header>
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 pt-8 pb-16">
-        <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">О клубе</div>
+      <section id="about" className="max-w-6xl mx-auto px-6 pt-8 pb-16 scroll-mt-24">
+        <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-600 text-white shadow-[0_10px_30px_-10px_rgba(236,72,153,0.6)] mb-5">
+          <Icon name="Sparkles" size={14} />
+          <span className="text-[11px] uppercase tracking-[0.3em] font-medium">О клубе</span>
+        </div>
         <h1
           className="leading-[0.95] mb-6"
           style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2.5rem, 7vw, 5rem)", fontWeight: 300 }}
@@ -71,23 +75,18 @@ export default function AboutHero() {
       </section>
 
       {/* Founder */}
-      <section className="max-w-6xl mx-auto px-6 pb-16">
-        <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">Владелица клуба</div>
+      <section id="founder" className="max-w-6xl mx-auto px-6 pb-16 scroll-mt-24">
+        <SectionHeading
+          eyebrow="Владелица клуба"
+          title="Юлия Мустафина"
+          icon="Crown"
+          description="Основательница и идеолог пространства, в котором каждой женщине разрешено быть собой."
+        />
         <div className="grid md:grid-cols-[380px_1fr] gap-8 items-start">
           <div className="rounded-3xl overflow-hidden bg-white shadow-md">
             <img src={FOUNDER_PHOTO} alt="Юлия Мустафина" className="w-full h-auto block" />
           </div>
           <div>
-            <h2
-              className="mb-2"
-              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}
-            >
-              Юлия Мустафина
-            </h2>
-            <div className="text-sm uppercase tracking-[0.2em] text-black/55 mb-6">
-              Основательница · идеолог клуба
-            </div>
-
             <div className="space-y-5">
               {INTERVIEW.map((item, i) => (
                 <div key={i} className="rounded-2xl bg-white border border-black/5 p-5">
