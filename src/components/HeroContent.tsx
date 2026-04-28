@@ -36,9 +36,24 @@ export default function HeroContent() {
 
   return (
     <>
-      <main className="absolute inset-0 z-20 flex flex-col items-stretch text-left px-0 pb-[6vh]" style={{ paddingTop: "22vh" }}>
+      <main className="absolute inset-0 z-20 flex flex-col items-center text-center px-6 pb-[6vh]" style={{ paddingTop: "22vh" }}>
+        {/* Tagline plate */}
+        <div className="mb-3 px-7 py-2.5 rounded-full border border-white/30 bg-black/45 backdrop-blur-md fade-in-up">
+          <span
+            className="text-white uppercase block"
+            style={{
+              fontFamily: "'Montserrat', sans-serif",
+              fontWeight: 200,
+              fontSize: "clamp(0.7rem, 1.1vw, 0.95rem)",
+              letterSpacing: "0.4em",
+            }}
+          >
+            Каждой женщине всё
+          </span>
+        </div>
+
         {/* Logo / Club Name */}
-        <div className="fade-in-up-delay w-full overflow-hidden">
+        <div className="fade-in-up-delay w-full flex justify-center overflow-hidden">
           <h1
             className="leading-none uppercase shine-text pulse-title inline-block"
             style={{
@@ -53,22 +68,6 @@ export default function HeroContent() {
           >
             МОЖНО
           </h1>
-        </div>
-
-        {/* Tagline — aligned under М */}
-        <div className="fade-in-up" style={{ paddingLeft: "0.25em" }}>
-          <span
-            className="text-white uppercase block mt-2"
-            style={{
-              fontFamily: "'Montserrat', sans-serif",
-              fontWeight: 300,
-              fontSize: "clamp(0.7rem, 1.1vw, 0.95rem)",
-              letterSpacing: "0.4em",
-              marginLeft: "0.25em",
-            }}
-          >
-            Каждой женщине всё
-          </span>
         </div>
 
         {/* Buttons — single line */}
@@ -122,9 +121,20 @@ export default function HeroContent() {
           </div>
         )}
 
+        {/* Divider */}
+        {upcoming.length > 0 && (
+          <div className="flex justify-center mt-6 px-6">
+            <div className="w-full max-w-md flex items-center gap-3">
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+              <Icon name="Sparkle" size={12} className="text-white/50" />
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+            </div>
+          </div>
+        )}
+
         {/* Upcoming events plate — moved to bottom */}
         {upcoming.length > 0 && (
-          <div className="flex justify-center mt-5 px-6">
+          <div className="flex justify-center mt-4 px-6">
             <button
               onClick={() => setEventsOpen(true)}
               className="max-w-[92vw] sm:max-w-md w-full px-5 py-3 rounded-2xl border border-white/15 bg-black/15 backdrop-blur-md text-left text-white hover:bg-black/25 hover:border-white/30 transition-all fade-in-up-delay"
