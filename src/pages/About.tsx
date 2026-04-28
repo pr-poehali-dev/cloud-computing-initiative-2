@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 import Icon from "@/components/ui/icon"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 
-const FOUNDER_PHOTO = "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/426bd8fc-c039-4714-9337-a409e04a17fc.jpg"
+const FOUNDER_PHOTO = "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/349d889f-422a-4043-8672-fc7de079d848.jpeg"
 
 const INTERVIEW = [
   {
@@ -18,11 +18,9 @@ const INTERVIEW = [
     q: "Чем «МОЖНО» отличается от других клубов?",
     a: "Мы не про нетворкинг ради контактов и не про статус. Мы про честный разговор и тёплое окружение. Здесь не нужно ничего из себя строить — ты приходишь такая, какая есть.",
   },
-  {
-    q: "Что ты желаешь каждой, кто пришла?",
-    a: "Чтобы услышала себя и почувствовала: можно по-своему, можно медленно, можно ярко. Можно — всё.",
-  },
 ]
+
+const FOUNDER_QUOTE = "Можно по-своему, можно медленно, можно ярко. Можно — всё."
 
 const SPEAKERS = [
   {
@@ -138,14 +136,14 @@ export default function About() {
         <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">Владелица клуба</div>
         <div className="grid md:grid-cols-[380px_1fr] gap-8 items-start">
           <div className="rounded-3xl overflow-hidden bg-white shadow-md">
-            <img src={FOUNDER_PHOTO} alt="Софья Берг" className="w-full h-auto block" />
+            <img src={FOUNDER_PHOTO} alt="Юлия Мустафина" className="w-full h-auto block" />
           </div>
           <div>
             <h2
               className="mb-2"
               style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}
             >
-              Софья Берг
+              Юлия Мустафина
             </h2>
             <div className="text-sm uppercase tracking-[0.2em] text-black/55 mb-6">
               Основательница · идеолог клуба
@@ -165,6 +163,42 @@ export default function About() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Founder's quote plate — centered */}
+        <div className="mt-12 flex justify-center">
+          <div className="relative max-w-3xl w-full">
+            <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-pink-200/60 via-rose-100/40 to-pink-300/60 blur-2xl" />
+            <div className="relative rounded-[2rem] bg-white/80 backdrop-blur-md border border-pink-200/60 shadow-[0_20px_60px_-20px_rgba(255,79,163,0.35)] px-8 md:px-14 py-12 text-center overflow-hidden">
+              <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none rounded-[2rem]"
+                style={{
+                  background:
+                    "radial-gradient(ellipse at top, rgba(255,182,193,0.25), transparent 60%), radial-gradient(ellipse at bottom right, rgba(231,126,220,0.18), transparent 70%)",
+                }}
+              />
+
+              <Icon name="Quote" size={32} className="mx-auto text-pink-400 mb-6 relative" />
+
+              <p
+                className="relative leading-[1.25] text-black/90 italic"
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: "clamp(1.5rem, 3.4vw, 2.5rem)",
+                  fontWeight: 400,
+                }}
+              >
+                «{FOUNDER_QUOTE}»
+              </p>
+
+              <div className="relative mx-auto mt-8 w-16 h-px bg-gradient-to-r from-transparent via-pink-400 to-transparent" />
+
+              <div className="relative mt-4 text-xs uppercase tracking-[0.35em] text-pink-600">
+                Юлия Мустафина · основательница
+              </div>
             </div>
           </div>
         </div>
