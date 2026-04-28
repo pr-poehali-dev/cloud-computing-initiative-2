@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import About from "./pages/About";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SocialProvider } from "@/contexts/SocialContext";
+import { NotificationsProvider } from "@/contexts/NotificationsContext";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +17,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <SocialProvider>
+        <NotificationsProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -28,6 +30,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
+        </NotificationsProvider>
       </SocialProvider>
     </AuthProvider>
   </QueryClientProvider>

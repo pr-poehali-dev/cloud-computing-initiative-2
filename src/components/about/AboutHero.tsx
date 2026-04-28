@@ -45,10 +45,46 @@ export default function AboutHero() {
           <span className="text-[11px] uppercase tracking-[0.3em] font-medium">О клубе</span>
         </div>
         <h1
-          className="leading-[0.95] mb-6"
-          style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2.5rem, 7vw, 5rem)", fontWeight: 300 }}
+          className="relative mb-6 text-center md:text-left"
+          style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontWeight: 300,
+            fontSize: "clamp(2.6rem, 7.5vw, 5.4rem)",
+            lineHeight: 0.98,
+            letterSpacing: "-0.01em",
+          }}
         >
-          Пространство, где женщине<br />разрешено быть собой.
+          <span className="block text-black/85">
+            Пространство,{" "}
+            <span
+              className="italic font-light bg-gradient-to-r from-rose-500 via-pink-600 to-fuchsia-600 bg-clip-text text-transparent"
+              style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            >
+              где&nbsp;женщине
+            </span>
+          </span>
+          <span className="block mt-1 text-black/90">
+            разрешено{" "}
+            <span
+              className="relative inline-block"
+              style={{ fontFamily: "'Cormorant Garamond', serif" }}
+            >
+              <span
+                aria-hidden
+                className="absolute left-0 right-0 bottom-1 h-2 md:h-3 bg-gradient-to-r from-pink-200/80 via-rose-200/80 to-fuchsia-200/80 rounded-full -z-0"
+              />
+              <span className="relative italic text-pink-700">быть собой</span>
+            </span>
+            <span className="text-pink-600">.</span>
+          </span>
+          <span
+            className="mt-5 inline-flex items-center gap-3 text-[10px] md:text-xs uppercase tracking-[0.4em] text-pink-600/80 font-sans"
+            style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 400 }}
+          >
+            <span className="w-10 h-px bg-gradient-to-r from-transparent to-pink-400" />
+            женский клуб «можно»
+            <span className="w-10 h-px bg-gradient-to-l from-transparent to-pink-400" />
+          </span>
         </h1>
         <div className="mt-10 flex justify-center">
           <div className="relative max-w-3xl w-full">
