@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import Icon from "@/components/ui/icon"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { EVENTS, categoryMeta } from "@/data/events"
 
 const FOUNDER_PHOTO = "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/349d889f-422a-4043-8672-fc7de079d848.jpeg"
 
@@ -232,6 +233,90 @@ export default function About() {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Events scrolling row */}
+      <section className="pb-16">
+        <div className="max-w-6xl mx-auto px-6 flex items-end justify-between mb-6 gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">Ближайшие мероприятия</div>
+            <h2
+              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}
+            >
+              Куда пригласим тебя в этом сезоне
+            </h2>
+          </div>
+          <Link
+            to="/"
+            className="hidden sm:inline-flex items-center gap-1.5 text-sm uppercase tracking-[0.2em] text-black/60 hover:text-black transition-colors"
+          >
+            Все даты
+            <Icon name="ArrowRight" size={14} />
+          </Link>
+        </div>
+
+        <div className="overflow-x-auto scrollbar-thin pb-3">
+          <div className="flex gap-5 px-6 max-w-[100vw]" style={{ width: "max-content" }}>
+            {EVENTS.map((ev, i) => {
+              const meta = categoryMeta(ev.category)
+              const dt = new Date(ev.date)
+              const day = dt.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
+              const weekday = dt.toLocaleDateString("ru-RU", { weekday: "long" })
+              return (
+                <div
+                  key={i}
+                  className="w-[280px] flex-shrink-0 rounded-3xl bg-white border border-black/5 shadow-sm overflow-hidden flex flex-col hover:-translate-y-1 transition-transform duration-300"
+                >
+                  <div className={`bg-gradient-to-br ${meta.color} text-white px-5 py-4 flex items-center justify-between`}>
+                    <div>
+                      <div className="text-xs uppercase tracking-[0.18em] opacity-90">{weekday}</div>
+                      <div className="text-2xl font-semibold leading-none mt-1" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                        {day}
+                      </div>
+                    </div>
+                    <div className="bg-white/20 backdrop-blur-md rounded-full p-2.5">
+                      <Icon name={meta.icon} size={18} />
+                    </div>
+                  </div>
+
+                  <div className="p-5 flex flex-col flex-1">
+                    <span className="self-start text-[10px] uppercase tracking-[0.2em] text-pink-600 mb-2">
+                      {ev.category}
+                    </span>
+                    <h3
+                      className="text-lg leading-snug mb-3 line-clamp-2"
+                      style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 500 }}
+                    >
+                      {ev.title}
+                    </h3>
+                    <div className="space-y-1.5 text-xs text-black/65 mb-4">
+                      <div className="flex items-center gap-1.5">
+                        <Icon name="Clock" size={12} />
+                        {ev.time}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Icon name="MapPin" size={12} />
+                        <span className="truncate">{ev.location}</span>
+                      </div>
+                    </div>
+                    <div className="mt-auto flex items-center justify-between pt-2 border-t border-black/5">
+                      <div className="text-base font-semibold">
+                        {ev.price.toLocaleString("ru-RU")} ₽
+                      </div>
+                      <Link
+                        to="/"
+                        className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.18em] text-pink-600 hover:text-pink-700"
+                      >
+                        Записаться
+                        <Icon name="ArrowRight" size={12} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </section>
 
