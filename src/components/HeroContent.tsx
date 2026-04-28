@@ -70,15 +70,6 @@ export default function HeroContent() {
           </h1>
         </div>
 
-        {/* About club link */}
-        <Link
-          to="/about"
-          className="mt-1 inline-flex items-center gap-2 px-6 py-2.5 rounded-full border border-white/30 bg-black/35 backdrop-blur-md text-white text-xs uppercase tracking-[0.3em] hover:bg-black/55 hover:border-white/50 transition-all fade-in-up-delay"
-        >
-          <Icon name="Info" size={14} />
-          Узнать о клубе
-        </Link>
-
         {/* Upcoming events plate */}
         {upcoming.length > 0 && (
           <button
@@ -149,6 +140,19 @@ export default function HeroContent() {
               Уже в клубе? Войти
             </button>
           )}
+        </div>
+
+        {/* About club button */}
+        <div className="relative inline-flex items-center justify-center mt-5">
+          <div aria-hidden className="absolute -inset-3 rounded-full pointer-events-none join-soft-glow" />
+          <div aria-hidden className="absolute -inset-[3px] rounded-full pointer-events-none pink-shimmer-border" />
+          <Link
+            to="/about"
+            className="relative z-10 inline-flex items-center gap-2 px-12 py-5 rounded-full bg-white/95 backdrop-blur-sm text-black font-normal text-sm transition-all duration-200 hover:bg-white cursor-pointer tracking-[0.25em] uppercase"
+          >
+            <Icon name="Info" size={14} />
+            Узнать о клубе
+          </Link>
         </div>
       </main>
 
