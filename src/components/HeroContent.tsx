@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import EventsModal from "@/components/EventsModal"
 import AuthModal, { AuthMode } from "@/components/AuthModal"
 import ProfileModal from "@/components/ProfileModal"
 import { useAuth } from "@/contexts/AuthContext"
 import Icon from "@/components/ui/icon"
 import { EVENTS, categoryMeta } from "@/data/events"
+import { toast } from "sonner"
 
 export default function HeroContent() {
   const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const [eventsOpen, setEventsOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState<AuthMode>("register")
@@ -25,13 +27,25 @@ export default function HeroContent() {
     }).slice(0, 4)
   }, [])
 
-  const handleJoinClick = () => {
-    if (isAuthenticated) {
-      setProfileOpen(true)
-    } else {
+  const handleEventsClick = () => {
+    if (!isAuthenticated) {
+      toast.error("Чтобы записаться на мероприятия, нужно зарегистрироваться")
       setAuthMode("register")
       setAuthOpen(true)
+      return
     }
+    setEventsOpen(true)
+  }
+
+  const handleAboutClick = (e: React.MouseEvent) => {
+    if (!isAuthenticated) {
+      e.preventDefault()
+      toast.error("Чтобы записаться на мероприятия, нужно зарегистрироваться")
+      setAuthMode("register")
+      setAuthOpen(true)
+      return
+    }
+    navigate("/about")
   }
 
   return (
@@ -83,28 +97,21 @@ export default function HeroContent() {
         <div className="flex items-center gap-3 sm:gap-4 justify-center flex-nowrap overflow-x-auto px-6 mt-auto">
           <div className="pill-running-glow rounded-full flex-shrink-0">
             <button
-              onClick={() => setEventsOpen(true)}
-              className="relative z-10 px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-white/50 backdrop-blur-sm text-black font-normal text-xs sm:text-sm transition-all duration-200 hover:bg-white/70 cursor-pointer tracking-[0.25em] uppercase whitespace-nowrap"
+              onClick={handleEventsClick}
+              className="relative z-10 inline-flex items-center gap-2 px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-white/50 backdrop-blur-sm text-black font-normal text-xs sm:text-sm transition-all duration-200 hover:bg-white/70 cursor-pointer tracking-[0.25em] uppercase whitespace-nowrap"
             >
+              {!isAuthenticated && <Icon name="Lock" size={13} />}
               Мероприятия
-            </button>
-          </div>
-
-          <div className="pill-running-glow rounded-full flex-shrink-0">
-            <button
-              onClick={handleJoinClick}
-              className="relative z-10 px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-white/50 backdrop-blur-sm text-black font-normal text-xs sm:text-sm transition-all duration-200 hover:bg-white/70 cursor-pointer tracking-[0.25em] uppercase whitespace-nowrap"
-            >
-              {isAuthenticated ? "Личный кабинет" : "Вступить в клуб"}
             </button>
           </div>
 
           <div className="pill-running-glow rounded-full flex-shrink-0">
             <Link
               to="/about"
+              onClick={handleAboutClick}
               className="relative z-10 inline-flex items-center gap-2 px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-white/50 backdrop-blur-sm text-black font-normal text-xs sm:text-sm transition-all duration-200 hover:bg-white/70 cursor-pointer tracking-[0.25em] uppercase whitespace-nowrap"
             >
-              <Icon name="Info" size={14} />
+              {!isAuthenticated ? <Icon name="Lock" size={13} /> : <Icon name="Info" size={14} />}
               Узнать о клубе
             </Link>
           </div>
@@ -128,7 +135,7 @@ export default function HeroContent() {
         {upcoming.length > 0 && (
           <div className="flex justify-center mt-4 px-6">
             <button
-              onClick={() => setEventsOpen(true)}
+              onClick={handleEventsClick}
               className="max-w-[92vw] sm:max-w-md w-full px-5 py-3 rounded-2xl border border-white/15 bg-black/15 backdrop-blur-md text-left text-white hover:bg-black/25 hover:border-white/30 transition-all fade-in-up-delay"
             >
               <div className="flex items-center gap-2 mb-2">
