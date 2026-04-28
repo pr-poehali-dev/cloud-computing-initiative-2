@@ -49,7 +49,7 @@ export default function AboutGalleryAndCta() {
       <section id="gallery" className="max-w-6xl mx-auto px-6 pb-20 scroll-mt-24">
         <SectionHeading
           eyebrow="Галерея"
-          title="Как проходят встречи"
+          title=""
           icon="Camera"
         />
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
@@ -73,7 +73,7 @@ export default function AboutGalleryAndCta() {
       <section id="testimonials" className="max-w-6xl mx-auto px-6 pb-20 scroll-mt-24">
         <SectionHeading
           eyebrow="Отзывы участниц"
-          title="Что говорят девушки клуба"
+          title=""
           icon="Quote"
         />
         <div className="grid md:grid-cols-2 gap-5">

@@ -19,8 +19,6 @@ const INTERVIEW = [
   },
 ]
 
-const FOUNDER_QUOTE = "Можно по-своему, можно медленно, можно ярко. Можно — всё."
-
 const STATS = [
   { value: "847", label: "участниц" },
   { value: "120+", label: "мероприятий в год" },
@@ -137,41 +135,6 @@ export default function AboutHero() {
           </div>
         </div>
 
-        {/* Founder's quote plate — centered */}
-        <div className="mt-12 flex justify-center">
-          <div className="relative max-w-3xl w-full">
-            <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-pink-200/60 via-rose-100/40 to-pink-300/60 blur-2xl" />
-            <div className="relative rounded-[2rem] bg-white/80 backdrop-blur-md border border-pink-200/60 shadow-[0_20px_60px_-20px_rgba(255,79,163,0.35)] px-8 md:px-14 py-12 text-center overflow-hidden">
-              <div
-                aria-hidden
-                className="absolute inset-0 pointer-events-none rounded-[2rem]"
-                style={{
-                  background:
-                    "radial-gradient(ellipse at top, rgba(255,182,193,0.25), transparent 60%), radial-gradient(ellipse at bottom right, rgba(231,126,220,0.18), transparent 70%)",
-                }}
-              />
-
-              <Icon name="Quote" size={32} className="mx-auto text-pink-400 mb-6 relative" />
-
-              <p
-                className="relative leading-[1.25] text-black/90 italic"
-                style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: "clamp(1.5rem, 3.4vw, 2.5rem)",
-                  fontWeight: 400,
-                }}
-              >
-                «{FOUNDER_QUOTE}»
-              </p>
-
-              <div className="relative mx-auto mt-8 w-16 h-px bg-gradient-to-r from-transparent via-pink-400 to-transparent" />
-
-              <div className="relative mt-4 text-xs uppercase tracking-[0.35em] text-pink-600">
-                Юлия Мустафина · основательница
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
     </>
   )

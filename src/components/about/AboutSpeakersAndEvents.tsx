@@ -35,7 +35,7 @@ export default function AboutSpeakersAndEvents() {
       <section id="speakers" className="max-w-6xl mx-auto px-6 pb-16 scroll-mt-24">
         <SectionHeading
           eyebrow="Спикеры клуба"
-          title="Те, кто делится опытом"
+          title=""
           icon="Mic"
         />
         <div className="grid md:grid-cols-3 gap-6">
@@ -65,7 +65,7 @@ export default function AboutSpeakersAndEvents() {
         <div className="max-w-6xl mx-auto px-6">
           <SectionHeading
             eyebrow="Наши мероприятия"
-            title="Что мы проводим в клубе"
+            title=""
             icon="CalendarHeart"
           />
         </div>

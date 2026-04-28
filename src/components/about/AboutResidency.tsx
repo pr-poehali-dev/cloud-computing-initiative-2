@@ -98,7 +98,7 @@ export default function AboutResidency() {
     <section id="residency" className="max-w-6xl mx-auto px-6 pb-16 scroll-mt-24">
       <SectionHeading
         eyebrow="Резидентство клуба"
-        title="Стань частью клуба надолго"
+        title=""
         icon="Crown"
         description="Выбери срок — и получи неограниченный доступ к мероприятиям, кругам поддержки и закрытым гостиным."
       />
