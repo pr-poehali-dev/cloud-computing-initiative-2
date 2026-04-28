@@ -29,23 +29,25 @@ export default function SectionHeading({
         </span>
       </div>
 
-      <div className={`relative inline-block ${isCenter ? "mx-auto" : ""}`}>
-        <div
-          aria-hidden
-          className="absolute -inset-x-4 -inset-y-2 rounded-3xl bg-gradient-to-r from-pink-100/70 via-rose-100/60 to-fuchsia-100/70 -z-10"
-        />
-        <h2
-          className="relative px-1"
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "clamp(2rem, 4vw, 3rem)",
-            fontWeight: 500,
-            lineHeight: 1.05,
-          }}
-        >
-          {title}
-        </h2>
-      </div>
+      {title && (
+        <div className={`relative inline-block ${isCenter ? "mx-auto" : ""}`}>
+          <div
+            aria-hidden
+            className="absolute -inset-x-4 -inset-y-2 rounded-3xl bg-gradient-to-r from-pink-100/70 via-rose-100/60 to-fuchsia-100/70 -z-10"
+          />
+          <h2
+            className="relative px-1"
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "clamp(2rem, 4vw, 3rem)",
+              fontWeight: 500,
+              lineHeight: 1.05,
+            }}
+          >
+            {title}
+          </h2>
+        </div>
+      )}
 
       {description && (
         <p

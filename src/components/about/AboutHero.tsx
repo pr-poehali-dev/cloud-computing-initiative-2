@@ -110,9 +110,9 @@ export default function AboutHero() {
       <section id="founder" className="max-w-6xl mx-auto px-6 pb-16 scroll-mt-24">
         <SectionHeading
           eyebrow="Владелица клуба"
-          title="Юлия Мустафина"
+          title=""
           icon="Crown"
-          description="Основательница и идеолог пространства, в котором каждой женщине разрешено быть собой."
+          description="Юлия Мустафина — основательница и идеолог женского клуба «МОЖНО»."
         />
         <div className="grid md:grid-cols-[380px_1fr] gap-8 items-start">
           <div className="rounded-3xl overflow-hidden bg-white shadow-md">
