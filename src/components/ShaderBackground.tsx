@@ -82,6 +82,26 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         </div>
       </div>
 
+      {/* 4. Sepia texture overlay */}
+      <div
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.45  0 0 0 0 0.32  0 0 0 0 0.18  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+          backgroundSize: "220px 220px",
+          mixBlendMode: "multiply",
+          opacity: 0.45,
+        }}
+      />
+      <div
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, rgba(112,66,20,0) 35%, rgba(86,48,12,0.28) 100%)",
+          mixBlendMode: "multiply",
+        }}
+      />
+
       {children}
     </div>
   )

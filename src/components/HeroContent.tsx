@@ -37,6 +37,15 @@ export default function HeroContent() {
   return (
     <>
       <main className="absolute inset-0 z-20 flex flex-col items-center text-center px-6 pb-[6vh]" style={{ paddingTop: "22vh" }}>
+        {/* Top divider */}
+        <div className="w-full max-w-md flex items-center gap-3 mb-5 fade-in-up">
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+          <Icon name="Star" size={11} className="text-white/55" />
+          <Icon name="Sparkle" size={13} className="text-pink-200" />
+          <Icon name="Star" size={11} className="text-white/55" />
+          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+        </div>
+
         {/* Tagline plate */}
         <div className="mb-3 px-7 py-2.5 rounded-full border border-white/30 bg-black/45 backdrop-blur-md fade-in-up">
           <span
@@ -121,12 +130,14 @@ export default function HeroContent() {
           </div>
         )}
 
-        {/* Divider */}
+        {/* Bottom divider */}
         {upcoming.length > 0 && (
           <div className="flex justify-center mt-6 px-6">
             <div className="w-full max-w-md flex items-center gap-3">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-              <Icon name="Sparkle" size={12} className="text-white/50" />
+              <Icon name="Star" size={11} className="text-white/55" />
+              <Icon name="Sparkle" size={13} className="text-pink-200" />
+              <Icon name="Star" size={11} className="text-white/55" />
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
             </div>
           </div>
