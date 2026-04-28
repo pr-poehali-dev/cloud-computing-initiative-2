@@ -1,23 +1,8 @@
 export default function HeroContent() {
   return (
-    <main className="absolute inset-0 z-20 flex flex-col items-center text-center px-6 pt-[6vh] pb-[6vh]">
-      {/* Tagline plate */}
-      <div className="mb-5 px-7 py-2.5 rounded-full border border-white/30 bg-black/45 backdrop-blur-md fade-in-up">
-        <span
-          className="text-white uppercase block"
-          style={{
-            fontFamily: "'Montserrat', sans-serif",
-            fontWeight: 200,
-            fontSize: "clamp(0.7rem, 1.1vw, 0.95rem)",
-            letterSpacing: "0.4em",
-          }}
-        >
-          Каждой женщине всё
-        </span>
-      </div>
-
-      {/* Logo / Club Name */}
-      <div className="mb-4 fade-in-up-delay w-full flex justify-center overflow-hidden">
+    <main className="absolute inset-0 z-20 flex flex-col items-center text-center px-6 pb-[6vh]">
+      {/* Logo / Club Name — centered vertically near the face */}
+      <div className="fade-in-up-delay w-full flex justify-center overflow-hidden absolute left-0 right-0" style={{ top: "42%", transform: "translateY(-50%)" }}>
         <h1
           className="leading-none uppercase shine-text inline-block"
           style={{
@@ -41,7 +26,7 @@ export default function HeroContent() {
         <div className="relative inline-flex items-center justify-center">
           <div aria-hidden className="absolute -inset-3 rounded-full pointer-events-none join-soft-glow" />
           <div aria-hidden className="absolute -inset-[3px] rounded-full pointer-events-none pink-shimmer-border" />
-          <button className="relative z-10 px-12 py-5 rounded-full bg-transparent border border-white/40 text-white font-normal text-sm transition-all duration-200 hover:bg-white/10 hover:border-white/60 cursor-pointer tracking-[0.25em] uppercase backdrop-blur-md">
+          <button className="relative z-10 px-12 py-5 rounded-full bg-white/95 backdrop-blur-sm text-black font-normal text-sm transition-all duration-200 hover:bg-white cursor-pointer tracking-[0.25em] uppercase">
             Мероприятия
           </button>
         </div>
