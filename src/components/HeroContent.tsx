@@ -47,18 +47,22 @@ export default function HeroContent() {
         </div>
 
         {/* Tagline plate */}
-        <div className="mb-3 px-7 py-2.5 rounded-full border border-white/30 bg-black/45 backdrop-blur-md fade-in-up">
-          <span
-            className="text-white uppercase block"
-            style={{
-              fontFamily: "'Montserrat', sans-serif",
-              fontWeight: 200,
-              fontSize: "clamp(0.7rem, 1.1vw, 0.95rem)",
-              letterSpacing: "0.4em",
-            }}
-          >
-            Каждой женщине всё
-          </span>
+        <div className="relative inline-flex items-center justify-center mb-3 fade-in-up">
+          <div aria-hidden className="absolute -inset-3 rounded-full pointer-events-none join-soft-glow" />
+          <div aria-hidden className="absolute -inset-[3px] rounded-full pointer-events-none pink-shimmer-border" />
+          <div className="relative z-10 px-9 py-3.5 rounded-full bg-white/50 backdrop-blur-sm">
+            <span
+              className="text-black uppercase block"
+              style={{
+                fontFamily: "'Montserrat', sans-serif",
+                fontWeight: 400,
+                fontSize: "clamp(0.8rem, 1.25vw, 1.1rem)",
+                letterSpacing: "0.4em",
+              }}
+            >
+              Каждой женщине всё
+            </span>
+          </div>
         </div>
 
         {/* Logo / Club Name */}
