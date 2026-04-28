@@ -52,11 +52,43 @@ export default function AboutHero() {
         >
           Пространство, где женщине<br />разрешено быть собой.
         </h1>
-        <p className="max-w-2xl text-lg text-black/70 leading-relaxed">
-          «МОЖНО» — это закрытый женский клуб, который объединяет тех, кому важно живое общение,
-          тёплое окружение и развитие в своём ритме. Мы собираемся на психологических кругах,
-          бизнес-завтраках, спа-ретритах и танцевальных вечерах.
-        </p>
+        <div className="mt-10 flex justify-center">
+          <div className="relative max-w-3xl w-full">
+            <div
+              aria-hidden
+              className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-pink-200/60 via-rose-100/40 to-fuchsia-200/60 blur-2xl"
+            />
+            <div className="relative rounded-[2rem] bg-white/80 backdrop-blur-md border border-pink-200/60 shadow-[0_20px_60px_-20px_rgba(255,79,163,0.35)] px-8 md:px-14 py-10 md:py-12 text-center overflow-hidden">
+              <div
+                aria-hidden
+                className="absolute inset-0 pointer-events-none rounded-[2rem]"
+                style={{
+                  background:
+                    "radial-gradient(ellipse at top, rgba(255,182,193,0.25), transparent 60%), radial-gradient(ellipse at bottom right, rgba(231,126,220,0.18), transparent 70%)",
+                }}
+              />
+
+              <div className="relative inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-[0_10px_30px_-10px_rgba(236,72,153,0.6)] mb-5">
+                <Icon name="Heart" size={20} />
+              </div>
+
+              <p
+                className="relative text-black/85 leading-[1.5]"
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: "clamp(1.15rem, 1.9vw, 1.5rem)",
+                  fontWeight: 400,
+                }}
+              >
+                <span className="font-medium text-pink-700">«МОЖНО»</span> — это закрытый женский клуб,
+                который объединяет тех, кому важно живое общение, тёплое окружение и развитие в своём ритме.
+                Мы собираемся на психологических кругах, бизнес-завтраках, спа-ретритах и танцевальных вечерах.
+              </p>
+
+              <div className="relative mx-auto mt-7 w-16 h-px bg-gradient-to-r from-transparent via-pink-400 to-transparent" />
+            </div>
+          </div>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
