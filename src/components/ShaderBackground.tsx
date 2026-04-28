@@ -35,12 +35,13 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         style={{ background: "linear-gradient(160deg, #f9b8d4 0%, #f2a7c3 50%, #e8007a 100%)" }}
       />
 
-      {/* 2. Картинка — без mixBlendMode, только маска по краям */}
+      {/* 2. Картинка — мягко растворяется в фон по краям */}
       <div
         className="absolute inset-0 w-full h-full flex items-center justify-center"
         style={{
-          WebkitMaskImage: "radial-gradient(ellipse 46% 50% at 50% 48%, black 20%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.15) 75%, transparent 90%)",
-          maskImage: "radial-gradient(ellipse 46% 50% at 50% 48%, black 20%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.15) 75%, transparent 90%)",
+          WebkitMaskImage: "radial-gradient(ellipse 38% 48% at 50% 48%, black 0%, rgba(0,0,0,0.95) 35%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.2) 78%, transparent 100%)",
+          maskImage: "radial-gradient(ellipse 38% 48% at 50% 48%, black 0%, rgba(0,0,0,0.95) 35%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.2) 78%, transparent 100%)",
+          filter: "blur(0.5px)",
         }}
       >
         <img
@@ -50,16 +51,17 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
             height: "130%",
             width: "auto",
             objectFit: "contain",
+            filter: "drop-shadow(0 0 60px rgba(242, 167, 195, 0.6))",
           }}
         />
       </div>
 
-      {/* 3. LiquidMetal — та же маска что у картинки, перелив строго в пределах лица */}
+      {/* 3. LiquidMetal — та же мягкая маска */}
       <div
         className="absolute inset-0 w-full h-full pointer-events-none flex items-center justify-center"
         style={{
-          WebkitMaskImage: "radial-gradient(ellipse 46% 50% at 50% 48%, black 20%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.15) 75%, transparent 90%)",
-          maskImage: "radial-gradient(ellipse 46% 50% at 50% 48%, black 20%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.15) 75%, transparent 90%)",
+          WebkitMaskImage: "radial-gradient(ellipse 38% 48% at 50% 48%, black 0%, rgba(0,0,0,0.95) 35%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.2) 78%, transparent 100%)",
+          maskImage: "radial-gradient(ellipse 38% 48% at 50% 48%, black 0%, rgba(0,0,0,0.95) 35%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.2) 78%, transparent 100%)",
           mixBlendMode: "screen",
           opacity: 0.5,
         }}
