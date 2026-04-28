@@ -64,6 +64,108 @@
     padding: 4px;
   }
 
+  /* Pink-magenta shimmering border around any pill — covers full contour incl. sides */
+  .pink-shimmer-border {
+    padding: 3px;
+    background: conic-gradient(
+      from 0deg,
+      #ffb6c1 0deg,
+      #ff85a1 40deg,
+      #e77edc 80deg,
+      #ff4fa3 120deg,
+      #c4547d 170deg,
+      #f8bbd9 210deg,
+      #ff85a1 250deg,
+      #e77edc 290deg,
+      #ffb6c1 330deg,
+      #ffb6c1 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation:
+      pinkBorderSpin 6s linear infinite,
+      pinkBorderPulse 2.4s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(255, 79, 163, 0.6));
+  }
+
+  @keyframes pinkBorderSpin {
+    0% {
+      background: conic-gradient(
+        from 0deg,
+        #ffb6c1,
+        #ff85a1,
+        #e77edc,
+        #ff4fa3,
+        #c4547d,
+        #f8bbd9,
+        #ff85a1,
+        #e77edc,
+        #ffb6c1
+      );
+    }
+    100% {
+      background: conic-gradient(
+        from 360deg,
+        #ffb6c1,
+        #ff85a1,
+        #e77edc,
+        #ff4fa3,
+        #c4547d,
+        #f8bbd9,
+        #ff85a1,
+        #e77edc,
+        #ffb6c1
+      );
+    }
+  }
+
+  @property --pink-angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  .pink-shimmer-border {
+    --pink-angle: 0deg;
+    background: conic-gradient(
+      from var(--pink-angle),
+      #ffb6c1,
+      #ff85a1,
+      #e77edc,
+      #ff4fa3,
+      #c4547d,
+      #f8bbd9,
+      #ff85a1,
+      #e77edc,
+      #ffb6c1
+    );
+    animation:
+      pinkAngleSpin 6s linear infinite,
+      pinkBorderPulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pinkAngleSpin {
+    to {
+      --pink-angle: 360deg;
+    }
+  }
+
+  @keyframes pinkBorderPulse {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 4px rgba(255, 79, 163, 0.45));
+    }
+    50% {
+      filter: drop-shadow(0 0 14px rgba(255, 79, 163, 0.85));
+    }
+  }
+
   .join-soft-glow {
     background: radial-gradient(
       ellipse at center,
