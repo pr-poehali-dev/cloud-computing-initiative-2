@@ -82,22 +82,47 @@ export default function ShaderBackground({ children }: ShaderBackgroundProps) {
         </div>
       </div>
 
-      {/* 4. Sepia texture overlay */}
+      {/* 4. Premium animated pattern — rises from bottom to top */}
+      <div
+        className="absolute inset-0 w-full h-full pointer-events-none premium-pattern"
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><g fill='none' stroke='%23ffffff' stroke-width='0.7' opacity='0.55'><circle cx='100' cy='100' r='38'/><circle cx='100' cy='100' r='22'/><path d='M100 62 C 118 80, 118 120, 100 138 C 82 120, 82 80, 100 62 Z'/><path d='M62 100 C 80 82, 120 82, 138 100 C 120 118, 80 118, 62 100 Z'/><circle cx='100' cy='100' r='4' fill='%23ffffff' opacity='0.5'/><circle cx='0' cy='0' r='3' fill='%23ffffff' opacity='0.4'/><circle cx='200' cy='0' r='3' fill='%23ffffff' opacity='0.4'/><circle cx='0' cy='200' r='3' fill='%23ffffff' opacity='0.4'/><circle cx='200' cy='200' r='3' fill='%23ffffff' opacity='0.4'/><path d='M0 100 L 30 100 M 170 100 L 200 100 M 100 0 L 100 30 M 100 170 L 100 200'/></g></svg>\")",
+          backgroundSize: "200px 200px",
+          backgroundRepeat: "repeat",
+          opacity: 0.18,
+          mixBlendMode: "soft-light",
+        }}
+      />
+
+      {/* 5. Sepia grain — strengthened */}
       <div
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{
           backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.45  0 0 0 0 0.32  0 0 0 0 0.18  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.45  0 0 0 0 0.32  0 0 0 0 0.18  0 0 0 0.7 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
           backgroundSize: "220px 220px",
           mixBlendMode: "multiply",
-          opacity: 0.45,
+          opacity: 0.7,
         }}
       />
+
+      {/* 6. Sepia warm tint */}
       <div
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse at center, rgba(112,66,20,0) 35%, rgba(86,48,12,0.28) 100%)",
+            "linear-gradient(180deg, rgba(120,75,30,0.18) 0%, rgba(90,55,20,0.22) 50%, rgba(70,40,15,0.28) 100%)",
+          mixBlendMode: "multiply",
+        }}
+      />
+
+      {/* 7. Vignette */}
+      <div
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, rgba(112,66,20,0) 30%, rgba(60,30,8,0.45) 100%)",
           mixBlendMode: "multiply",
         }}
       />

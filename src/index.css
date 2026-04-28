@@ -51,6 +51,19 @@
     animation: fadeInUp 1.4s ease-out 0.4s forwards;
   }
 
+  @keyframes patternRise {
+    0% {
+      background-position: 0 0;
+    }
+    100% {
+      background-position: 0 -800px;
+    }
+  }
+
+  .premium-pattern {
+    animation: patternRise 60s linear infinite;
+  }
+
   /* Ring-shaped mask: shows the shimmering spots only along the pill contour */
   .join-border-mask {
     -webkit-mask:
