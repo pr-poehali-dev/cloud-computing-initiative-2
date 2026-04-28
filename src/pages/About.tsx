@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import Icon from "@/components/ui/icon"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { EVENTS, categoryMeta } from "@/data/events"
+import { EVENTS, categoryMeta, type ClubEvent } from "@/data/events"
 
 const FOUNDER_PHOTO = "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/349d889f-422a-4043-8672-fc7de079d848.jpeg"
 
@@ -89,6 +89,7 @@ const TESTIMONIALS = [
 
 export default function About() {
   const [lightbox, setLightbox] = useState<string | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<ClubEvent | null>(null)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 via-white to-pink-50 text-black">
@@ -236,89 +237,139 @@ export default function About() {
         </div>
       </section>
 
-      {/* Events scrolling row */}
+      {/* Our events */}
       <section className="pb-16">
-        <div className="max-w-6xl mx-auto px-6 flex items-end justify-between mb-6 gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">Ближайшие мероприятия</div>
-            <h2
-              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}
-            >
-              Куда пригласим тебя в этом сезоне
-            </h2>
-          </div>
-          <Link
-            to="/"
-            className="hidden sm:inline-flex items-center gap-1.5 text-sm uppercase tracking-[0.2em] text-black/60 hover:text-black transition-colors"
+        <div className="max-w-6xl mx-auto px-6 mb-6">
+          <div className="text-xs uppercase tracking-[0.3em] text-pink-600 mb-3">Наши мероприятия</div>
+          <h2
+            style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}
           >
-            Все даты
-            <Icon name="ArrowRight" size={14} />
-          </Link>
+            Что мы проводим в клубе
+          </h2>
         </div>
 
         <div className="overflow-x-auto scrollbar-thin pb-3">
-          <div className="flex gap-5 px-6 max-w-[100vw]" style={{ width: "max-content" }}>
+          <div className="flex gap-5 px-6" style={{ width: "max-content" }}>
             {EVENTS.map((ev, i) => {
               const meta = categoryMeta(ev.category)
-              const dt = new Date(ev.date)
-              const day = dt.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
-              const weekday = dt.toLocaleDateString("ru-RU", { weekday: "long" })
               return (
-                <div
+                <button
                   key={i}
-                  className="w-[280px] flex-shrink-0 rounded-3xl bg-white border border-black/5 shadow-sm overflow-hidden flex flex-col hover:-translate-y-1 transition-transform duration-300"
+                  onClick={() => setSelectedEvent(ev)}
+                  className="w-[300px] flex-shrink-0 rounded-3xl bg-white border border-black/5 shadow-sm overflow-hidden flex flex-col text-left hover:-translate-y-1 hover:shadow-md transition-all duration-300"
                 >
-                  <div className={`bg-gradient-to-br ${meta.color} text-white px-5 py-4 flex items-center justify-between`}>
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.18em] opacity-90">{weekday}</div>
-                      <div className="text-2xl font-semibold leading-none mt-1" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-                        {day}
-                      </div>
-                    </div>
-                    <div className="bg-white/20 backdrop-blur-md rounded-full p-2.5">
-                      <Icon name={meta.icon} size={18} />
-                    </div>
-                  </div>
-
-                  <div className="p-5 flex flex-col flex-1">
-                    <span className="self-start text-[10px] uppercase tracking-[0.2em] text-pink-600 mb-2">
+                  <div className={`bg-gradient-to-br ${meta.color} h-2`} />
+                  <div className="p-6 flex flex-col flex-1">
+                    <span className="self-start text-[10px] uppercase tracking-[0.2em] text-pink-600 mb-3">
                       {ev.category}
                     </span>
                     <h3
-                      className="text-lg leading-snug mb-3 line-clamp-2"
-                      style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 500 }}
+                      className="text-xl leading-snug mb-3"
+                      style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
                     >
                       {ev.title}
                     </h3>
-                    <div className="space-y-1.5 text-xs text-black/65 mb-4">
-                      <div className="flex items-center gap-1.5">
-                        <Icon name="Clock" size={12} />
-                        {ev.time}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Icon name="MapPin" size={12} />
-                        <span className="truncate">{ev.location}</span>
-                      </div>
-                    </div>
-                    <div className="mt-auto flex items-center justify-between pt-2 border-t border-black/5">
-                      <div className="text-base font-semibold">
-                        {ev.price.toLocaleString("ru-RU")} ₽
-                      </div>
-                      <Link
-                        to="/"
-                        className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.18em] text-pink-600 hover:text-pink-700"
-                      >
-                        Записаться
-                        <Icon name="ArrowRight" size={12} />
-                      </Link>
+                    <p className="text-sm text-black/65 leading-relaxed mb-5">
+                      {ev.description}
+                    </p>
+                    <div className="mt-auto inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-pink-600">
+                      Подробнее
+                      <Icon name="ArrowRight" size={12} />
                     </div>
                   </div>
-                </div>
+                </button>
               )
             })}
           </div>
         </div>
       </section>
+
+      {/* Event details modal */}
+      <Dialog open={!!selectedEvent} onOpenChange={(v) => !v && setSelectedEvent(null)}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden">
+          {selectedEvent && (() => {
+            const meta = categoryMeta(selectedEvent.category)
+            const dt = new Date(selectedEvent.date)
+            const day = dt.toLocaleDateString("ru-RU", { day: "numeric", month: "long" })
+            const weekday = dt.toLocaleDateString("ru-RU", { weekday: "long" })
+            return (
+              <div>
+                <div className={`bg-gradient-to-br ${meta.color} text-white px-7 py-6`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="bg-white/20 backdrop-blur-md rounded-full p-2.5">
+                      <Icon name={meta.icon} size={18} />
+                    </div>
+                    <span className="text-[11px] uppercase tracking-[0.22em] opacity-90">
+                      {selectedEvent.category}
+                    </span>
+                  </div>
+                  <h3
+                    className="text-2xl md:text-3xl leading-tight"
+                    style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+                  >
+                    {selectedEvent.title}
+                  </h3>
+                </div>
+
+                <div className="px-7 py-6">
+                  <p className="text-black/75 leading-relaxed mb-6">
+                    {selectedEvent.description}
+                  </p>
+
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-start gap-3">
+                      <Icon name="Calendar" size={16} className="text-pink-600 mt-0.5" />
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-black/50">Дата</div>
+                        <div className="text-black/80 capitalize">{weekday}, {day}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Icon name="Clock" size={16} className="text-pink-600 mt-0.5" />
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-black/50">Время</div>
+                        <div className="text-black/80">{selectedEvent.time}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Icon name="MapPin" size={16} className="text-pink-600 mt-0.5" />
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-black/50">Место</div>
+                        <div className="text-black/80">{selectedEvent.location}</div>
+                      </div>
+                    </div>
+                    {selectedEvent.speaker && (
+                      <div className="flex items-start gap-3">
+                        <Icon name="User" size={16} className="text-pink-600 mt-0.5" />
+                        <div>
+                          <div className="text-[10px] uppercase tracking-[0.2em] text-black/50">Спикер</div>
+                          <div className="text-black/80">{selectedEvent.speaker}</div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-3">
+                      <Icon name="Wallet" size={16} className="text-pink-600 mt-0.5" />
+                      <div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-black/50">Стоимость</div>
+                        <div className="text-black/80 font-medium">{selectedEvent.price.toLocaleString("ru-RU")} ₽</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link
+                    to="/"
+                    onClick={() => setSelectedEvent(null)}
+                    className="mt-7 w-full inline-flex items-center justify-center gap-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white px-6 py-3 text-sm uppercase tracking-[0.2em] transition-colors"
+                  >
+                    Записаться
+                    <Icon name="ArrowRight" size={14} />
+                  </Link>
+                </div>
+              </div>
+            )
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Gallery */}
       <section className="max-w-6xl mx-auto px-6 pb-20">
