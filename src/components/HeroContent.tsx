@@ -12,9 +12,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import EventsModal from "@/components/EventsModal"
 
 export default function HeroContent() {
   const [open, setOpen] = useState(false)
+  const [eventsOpen, setEventsOpen] = useState(false)
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -77,7 +79,10 @@ export default function HeroContent() {
           <div className="relative inline-flex items-center justify-center">
             <div aria-hidden className="absolute -inset-3 rounded-full pointer-events-none join-soft-glow" />
             <div aria-hidden className="absolute -inset-[3px] rounded-full pointer-events-none pink-shimmer-border" />
-            <button className="relative z-10 px-12 py-5 rounded-full bg-white/95 backdrop-blur-sm text-black font-normal text-sm transition-all duration-200 hover:bg-white cursor-pointer tracking-[0.25em] uppercase">
+            <button
+              onClick={() => setEventsOpen(true)}
+              className="relative z-10 px-12 py-5 rounded-full bg-white/95 backdrop-blur-sm text-black font-normal text-sm transition-all duration-200 hover:bg-white cursor-pointer tracking-[0.25em] uppercase"
+            >
               Мероприятия
             </button>
           </div>
@@ -153,6 +158,8 @@ export default function HeroContent() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <EventsModal open={eventsOpen} onOpenChange={setEventsOpen} />
     </>
   )
 }
