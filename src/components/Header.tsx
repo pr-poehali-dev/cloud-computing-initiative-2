@@ -63,15 +63,33 @@ export default function Header() {
                 Разделы клуба
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {ABOUT_SECTIONS.map((s) => (
-                <DropdownMenuItem key={s.to} asChild className="cursor-pointer">
-                  <Link to={s.to} className="flex items-center gap-2.5 py-2">
-                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white">
-                      <Icon name={s.icon} size={13} />
-                    </span>
-                    <span className="text-sm">{s.title}</span>
-                  </Link>
-                </DropdownMenuItem>
+              {ABOUT_SECTIONS.map((s, idx) => (
+                <div key={s.to}>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link to={s.to} className="flex items-center gap-2.5 py-2">
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white">
+                        <Icon name={s.icon} size={13} />
+                      </span>
+                      <span className="text-sm">{s.title}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  {idx === 0 && (
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault()
+                        setSocialOpen(true)
+                      }}
+                      className="cursor-pointer focus:bg-pink-50"
+                    >
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-pink-600 text-white">
+                        <Icon name="Heart" size={13} />
+                      </span>
+                      <span className="text-sm uppercase tracking-[0.18em] text-pink-700 font-medium">
+                        Здесь можно
+                      </span>
+                    </DropdownMenuItem>
+                  )}
+                </div>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -80,10 +98,10 @@ export default function Header() {
             <button
               onClick={() => setSocialOpen(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-pink-600/90 hover:bg-pink-600 text-white text-xs uppercase tracking-[0.2em] transition-colors"
-              title="Соц.сеть клуба"
+              title="Здесь можно"
             >
               <Icon name="Heart" size={14} />
-              <span className="hidden sm:inline">Соц.сеть</span>
+              <span className="hidden sm:inline">Здесь можно</span>
             </button>
             <button
               onClick={() => setNotificationsOpen(true)}
