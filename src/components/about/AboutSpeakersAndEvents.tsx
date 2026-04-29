@@ -4,6 +4,7 @@ import Icon from "@/components/ui/icon"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { EVENTS, CATEGORIES, categoryMeta, type ClubEvent, type EventCategory } from "@/data/events"
 import SectionHeading from "@/components/about/SectionHeading"
+import BecomeSpeakerCTA from "@/components/about/BecomeSpeakerCTA"
 
 const SPEAKERS = [
   {
@@ -74,6 +75,8 @@ export default function AboutSpeakersAndEvents() {
             </div>
           ))}
         </div>
+
+        <BecomeSpeakerCTA />
       </section>
 
       {/* Our events — by categories */}
