@@ -79,14 +79,14 @@ export default function Header() {
                         e.preventDefault()
                         setSocialOpen(true)
                       }}
-                      className="cursor-pointer focus:bg-pink-50"
+                      className="cursor-pointer"
                     >
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-pink-600 text-white">
-                        <Icon name="Heart" size={13} />
-                      </span>
-                      <span className="text-sm uppercase tracking-[0.18em] text-pink-700 font-medium">
-                        Здесь можно
-                      </span>
+                      <div className="flex items-center gap-2.5 py-2">
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white">
+                          <Icon name="Heart" size={13} />
+                        </span>
+                        <span className="text-sm">Здесь можно</span>
+                      </div>
                     </DropdownMenuItem>
                   )}
                 </div>
