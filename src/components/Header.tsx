@@ -22,6 +22,7 @@ const ABOUT_SECTIONS: { id: string; title: string; icon: string }[] = [
   { id: "speakers", title: "Спикеры", icon: "Mic" },
   { id: "events", title: "Мероприятия", icon: "CalendarHeart" },
   { id: "residency", title: "Резидентство", icon: "Gem" },
+  { id: "partnership", title: "Партнёрство", icon: "Handshake" },
   { id: "gallery", title: "Галерея", icon: "Camera" },
   { id: "testimonials", title: "Отзывы", icon: "Quote" },
   { id: "cta", title: "Вступить в клуб", icon: "Heart" },

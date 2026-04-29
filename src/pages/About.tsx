@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom"
 import AboutHero from "@/components/about/AboutHero"
 import AboutSpeakersAndEvents from "@/components/about/AboutSpeakersAndEvents"
 import AboutResidency from "@/components/about/AboutResidency"
+import AboutPartnership from "@/components/about/AboutPartnership"
 import AboutGalleryAndCta from "@/components/about/AboutGalleryAndCta"
 
 export default function About() {
@@ -26,6 +27,7 @@ export default function About() {
       <AboutHero />
       <AboutSpeakersAndEvents />
       <AboutResidency />
+      <AboutPartnership />
       <AboutGalleryAndCta />
     </div>
   )
