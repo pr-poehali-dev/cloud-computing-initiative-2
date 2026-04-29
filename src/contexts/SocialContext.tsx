@@ -4,6 +4,8 @@ export interface SocialComment {
   id: string
   authorEmail: string
   authorName: string
+  authorRole?: "member" | "team"
+  authorPosition?: string
   text: string
   createdAt: string
 }
@@ -12,6 +14,8 @@ export interface SocialPost {
   id: string
   authorEmail: string
   authorName: string
+  authorRole?: "member" | "team"
+  authorPosition?: string
   caption: string
   images: string[]
   likes: string[]
@@ -19,12 +23,19 @@ export interface SocialPost {
   createdAt: string
 }
 
+interface AuthorInfo {
+  email: string
+  name: string
+  role?: "member" | "team"
+  position?: string
+}
+
 interface SocialContextType {
   posts: SocialPost[]
-  createPost: (data: { caption: string; images: string[]; author: { email: string; name: string } }) => void
+  createPost: (data: { caption: string; images: string[]; author: AuthorInfo }) => void
   deletePost: (id: string, currentEmail: string) => void
   toggleLike: (postId: string, email: string) => void
-  addComment: (postId: string, author: { email: string; name: string }, text: string) => void
+  addComment: (postId: string, author: AuthorInfo, text: string) => void
   deleteComment: (postId: string, commentId: string, currentEmail: string) => void
 }
 
@@ -103,6 +114,8 @@ export function SocialProvider({ children }: { children: ReactNode }) {
       id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       authorEmail: author.email,
       authorName: author.name,
+      authorRole: author.role,
+      authorPosition: author.position,
       caption,
       images,
       likes: [],
@@ -138,6 +151,8 @@ export function SocialProvider({ children }: { children: ReactNode }) {
                   id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                   authorEmail: author.email,
                   authorName: author.name,
+                  authorRole: author.role,
+                  authorPosition: author.position,
                   text,
                   createdAt: new Date().toISOString(),
                 },

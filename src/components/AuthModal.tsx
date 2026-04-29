@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import Icon from "@/components/ui/icon"
 import { toast } from "sonner"
-import { useAuth } from "@/contexts/AuthContext"
+import { useAuth, isTeamInviteCode } from "@/contexts/AuthContext"
 
 export type AuthMode = "login" | "register"
 
@@ -28,6 +28,8 @@ export default function AuthModal({ open, onOpenChange, initialMode = "login", o
   const [submitting, setSubmitting] = useState(false)
   const [refCode, setRefCode] = useState<string>("")
   const [inviterName, setInviterName] = useState<string | null>(null)
+  const [teamCode, setTeamCode] = useState<string>("")
+  const isTeamCode = isTeamInviteCode(teamCode)
 
   // Login state
   const [email, setEmail] = useState("")
@@ -86,16 +88,22 @@ export default function AuthModal({ open, onOpenChange, initialMode = "login", o
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-    const res = await register({ ...reg, referralCode: refCode || undefined })
+    const codeToSend = teamCode.trim() || refCode || undefined
+    const res = await register({ ...reg, referralCode: codeToSend })
     setSubmitting(false)
     if (res.ok) {
-      if (inviterName) {
+      if (isTeamCode) {
+        toast.success("Добро пожаловать в команду клуба «МОЖНО»!", {
+          description: "Расширенный функционал уже доступен в личном кабинете.",
+        })
+      } else if (inviterName) {
         toast.success(`Добро пожаловать! Подруге ${inviterName} начислены бонусы.`)
       } else {
         toast.success("Анкета принята! Добро пожаловать в клуб.")
       }
       localStorage.removeItem("mojno_pending_ref")
       setRefCode("")
+      setTeamCode("")
       setInviterName(null)
       reset()
       onOpenChange(false)
@@ -212,9 +220,30 @@ export default function AuthModal({ open, onOpenChange, initialMode = "login", o
               <Input id="rSource" required value={reg.source} onChange={upd("source")} placeholder="Instagram, подруга, мероприятие…" />
             </div>
 
-            <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-black text-white text-sm uppercase tracking-[0.2em] hover:bg-black/85 transition-colors disabled:opacity-60">
-              <Icon name="Sparkles" size={16} />
-              Стать участницей
+            <div className="space-y-1.5">
+              <Label htmlFor="rTeam" className="flex items-center gap-1.5">
+                <Icon name="Crown" size={13} className="text-amber-500" />
+                Код приглашения команды
+                <span className="text-black/40 text-[11px] font-normal">— если есть</span>
+              </Label>
+              <Input
+                id="rTeam"
+                value={teamCode}
+                onChange={(e) => setTeamCode(e.target.value)}
+                placeholder="MOZHNO-…"
+                className={isTeamCode ? "border-amber-400 focus-visible:ring-amber-300" : ""}
+              />
+              {isTeamCode && (
+                <div className="rounded-xl bg-gradient-to-r from-amber-50 via-pink-50 to-fuchsia-50 border border-amber-200 px-3 py-2 flex items-center gap-2 text-xs text-black/75">
+                  <Icon name="Crown" size={14} className="text-amber-500 flex-shrink-0" />
+                  Код подтверждён — после регистрации ты попадёшь в команду клуба с расширенным доступом.
+                </div>
+              )}
+            </div>
+
+            <button type="submit" disabled={submitting} className={`w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full text-sm uppercase tracking-[0.2em] transition-colors disabled:opacity-60 ${isTeamCode ? "bg-gradient-to-r from-amber-500 via-pink-500 to-fuchsia-600 text-white hover:opacity-95" : "bg-black text-white hover:bg-black/85"}`}>
+              <Icon name={isTeamCode ? "Crown" : "Sparkles"} size={16} />
+              {isTeamCode ? "Войти в команду клуба" : "Стать участницей"}
             </button>
           </form>
         )}

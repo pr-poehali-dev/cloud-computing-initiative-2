@@ -119,9 +119,13 @@ export default function Header() {
             {isAuthenticated ? (
               <button
                 onClick={() => setProfileOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 text-black text-xs uppercase tracking-[0.2em] hover:bg-white transition-colors"
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.2em] transition-colors ${
+                  user?.role === "team"
+                    ? "bg-gradient-to-r from-amber-400 via-pink-500 to-fuchsia-500 text-white hover:opacity-95"
+                    : "bg-white/95 text-black hover:bg-white"
+                }`}
               >
-                <Icon name="User" size={14} />
+                <Icon name={user?.role === "team" ? "Crown" : "User"} size={14} />
                 {user?.firstName || "Кабинет"}
               </button>
             ) : (

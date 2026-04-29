@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
 
+export type UserRole = "member" | "team"
+
 export interface User {
   firstName: string
   lastName: string
@@ -15,9 +17,31 @@ export interface User {
   invitedCount: number
   points: number
   balance: number
+  role?: UserRole
+  teamPosition?: string
 }
 
 export const REFERRAL_BONUS = 100
+
+interface TeamInvite {
+  code: string
+  position: string
+}
+
+export const TEAM_INVITES: TeamInvite[] = [
+  { code: "MOZHNO-FOUNDER", position: "Основательница клуба" },
+  { code: "MOZHNO-MANAGER", position: "Менеджер клуба" },
+  { code: "MOZHNO-CONTENT", position: "Контент-мейкер" },
+  { code: "MOZHNO-TEAM", position: "Команда клуба" },
+]
+
+const findTeamInvite = (code?: string): TeamInvite | null => {
+  if (!code) return null
+  const trimmed = code.trim().toUpperCase()
+  return TEAM_INVITES.find((t) => t.code.toUpperCase() === trimmed) || null
+}
+
+export const isTeamInviteCode = (code?: string): boolean => !!findTeamInvite(code)
 
 interface AuthContextType {
   user: User | null
@@ -124,10 +148,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: "Пользователь с таким email уже существует" }
     }
 
-    // Find inviter by referral code
     const refCode = data.referralCode?.trim()
+    const teamInvite = findTeamInvite(refCode)
+
+    // Find inviter by referral code (only if it's NOT a team invite)
     let inviterEmail: string | undefined
-    if (refCode) {
+    if (refCode && !teamInvite) {
       const inviter = users.find(
         (u) => (u.referralCode || "").toLowerCase() === refCode.toLowerCase()
       )
@@ -144,6 +170,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       invitedCount: 0,
       points: 0,
       balance: 0,
+      role: teamInvite ? "team" : "member",
+      teamPosition: teamInvite?.position,
     }
 
     const next = [...users, newUser]

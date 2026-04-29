@@ -12,6 +12,7 @@ import Icon from "@/components/ui/icon"
 import { useAuth } from "@/contexts/AuthContext"
 import { useSocial, type SocialPost } from "@/contexts/SocialContext"
 import { toast } from "sonner"
+import TeamBadge from "@/components/TeamBadge"
 
 interface Props {
   open: boolean
@@ -52,6 +53,9 @@ export default function SocialModal({ open, onOpenChange, onRequireAuth }: Props
 
   const myEmail = user?.email || ""
   const myName = user ? `${user.firstName} ${user.lastName}`.trim() : ""
+  const myRole = user?.role
+  const myPosition = user?.teamPosition
+  const isTeam = myRole === "team"
 
   const requireAuth = () => {
     if (!isAuthenticated) {
@@ -88,7 +92,7 @@ export default function SocialModal({ open, onOpenChange, onRequireAuth }: Props
     createPost({
       caption: caption.trim(),
       images: draftImages,
-      author: { email: myEmail, name: myName || "Гостья" },
+      author: { email: myEmail, name: myName || "Гостья", role: myRole, position: myPosition },
     })
     setCaption("")
     setDraftImages([])
@@ -104,7 +108,11 @@ export default function SocialModal({ open, onOpenChange, onRequireAuth }: Props
     if (!requireAuth()) return
     const text = (commentDrafts[postId] || "").trim()
     if (!text) return
-    addComment(postId, { email: myEmail, name: myName || "Гостья" }, text)
+    addComment(
+      postId,
+      { email: myEmail, name: myName || "Гостья", role: myRole, position: myPosition },
+      text
+    )
     setCommentDrafts((d) => ({ ...d, [postId]: "" }))
   }
 
@@ -128,8 +136,19 @@ export default function SocialModal({ open, onOpenChange, onRequireAuth }: Props
           {isAuthenticated ? (
             <div className="px-6 py-5 border-b border-black/5 bg-pink-50/40">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white flex items-center justify-center text-xs font-medium flex-shrink-0">
+                <div
+                  className={`relative w-10 h-10 rounded-full text-white flex items-center justify-center text-xs font-medium flex-shrink-0 ${
+                    isTeam
+                      ? "bg-gradient-to-br from-amber-400 via-pink-500 to-fuchsia-600 ring-2 ring-amber-300"
+                      : "bg-gradient-to-br from-pink-400 to-rose-500"
+                  }`}
+                >
                   {initials(myName) || "Я"}
+                  {isTeam && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 text-white flex items-center justify-center border-2 border-white">
+                      <Icon name="Crown" size={8} />
+                    </span>
+                  )}
                 </div>
                 <div className="flex-1">
                   <Textarea
@@ -207,11 +226,27 @@ export default function SocialModal({ open, onOpenChange, onRequireAuth }: Props
                   className="rounded-2xl border border-black/5 bg-white overflow-hidden"
                 >
                   <div className="px-5 pt-4 pb-3 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white flex items-center justify-center text-xs font-medium flex-shrink-0">
+                    <div
+                      className={`relative w-10 h-10 rounded-full text-white flex items-center justify-center text-xs font-medium flex-shrink-0 ${
+                        post.authorRole === "team"
+                          ? "bg-gradient-to-br from-amber-400 via-pink-500 to-fuchsia-600 ring-2 ring-amber-300"
+                          : "bg-gradient-to-br from-pink-400 to-rose-500"
+                      }`}
+                    >
                       {initials(post.authorName) || "?"}
+                      {post.authorRole === "team" && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 text-white flex items-center justify-center border-2 border-white">
+                          <Icon name="Crown" size={8} />
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{post.authorName}</div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="text-sm font-medium truncate">{post.authorName}</div>
+                        {post.authorRole === "team" && (
+                          <TeamBadge withLabel position={post.authorPosition || "Команда клуба"} />
+                        )}
+                      </div>
                       <div className="text-[10px] uppercase tracking-[0.18em] text-black/45">
                         {formatTime(post.createdAt)}
                       </div>
@@ -276,12 +311,28 @@ export default function SocialModal({ open, onOpenChange, onRequireAuth }: Props
                   <div className="px-5 pb-4 space-y-3">
                     {post.comments.map((c) => (
                       <div key={c.id} className="flex items-start gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-300 to-rose-400 text-white flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                        <div
+                          className={`relative w-8 h-8 rounded-full text-white flex items-center justify-center text-[10px] font-medium flex-shrink-0 ${
+                            c.authorRole === "team"
+                              ? "bg-gradient-to-br from-amber-400 via-pink-500 to-fuchsia-600 ring-1 ring-amber-300"
+                              : "bg-gradient-to-br from-pink-300 to-rose-400"
+                          }`}
+                        >
                           {initials(c.authorName) || "?"}
+                          {c.authorRole === "team" && (
+                            <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 text-white flex items-center justify-center border border-white">
+                              <Icon name="Crown" size={7} />
+                            </span>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0 bg-black/[0.03] rounded-2xl px-3 py-2">
                           <div className="flex items-center justify-between gap-2">
-                            <div className="text-xs font-medium">{c.authorName}</div>
+                            <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                              <div className="text-xs font-medium truncate">{c.authorName}</div>
+                              {c.authorRole === "team" && (
+                                <TeamBadge withLabel position={c.authorPosition || "Команда клуба"} />
+                              )}
+                            </div>
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] text-black/45">{formatTime(c.createdAt)}</span>
                               {c.authorEmail === myEmail && (
