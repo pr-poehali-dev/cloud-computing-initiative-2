@@ -1,8 +1,8 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import Icon from "@/components/ui/icon"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { EVENTS, categoryMeta, type ClubEvent } from "@/data/events"
+import { EVENTS, CATEGORIES, categoryMeta, type ClubEvent, type EventCategory } from "@/data/events"
 import SectionHeading from "@/components/about/SectionHeading"
 
 const SPEAKERS = [
@@ -28,6 +28,22 @@ const SPEAKERS = [
 
 export default function AboutSpeakersAndEvents() {
   const [selectedEvent, setSelectedEvent] = useState<ClubEvent | null>(null)
+  const [activeCategory, setActiveCategory] = useState<EventCategory | "Все">("Все")
+
+  const eventsByCategory = useMemo(() => {
+    const map = new Map<EventCategory, ClubEvent[]>()
+    EVENTS.forEach((e) => {
+      const arr = map.get(e.category) || []
+      arr.push(e)
+      map.set(e.category, arr)
+    })
+    return map
+  }, [])
+
+  const visibleCategories =
+    activeCategory === "Все"
+      ? CATEGORIES
+      : CATEGORIES.filter((c) => c.name === activeCategory)
 
   return (
     <>
@@ -60,46 +76,139 @@ export default function AboutSpeakersAndEvents() {
         </div>
       </section>
 
-      {/* Our events */}
-      <section id="events" className="pb-16 scroll-mt-24">
+      {/* Our events — by categories */}
+      <section id="events" className="pb-20 scroll-mt-24">
         <div className="max-w-6xl mx-auto px-6">
           <SectionHeading
             eyebrow="Наши мероприятия"
             title=""
             icon="CalendarHeart"
           />
-        </div>
 
-        <div className="overflow-x-auto scrollbar-thin pb-3">
-          <div className="flex gap-5 px-6" style={{ width: "max-content" }}>
-            {EVENTS.map((ev, i) => {
-              const meta = categoryMeta(ev.category)
+          {/* Category filters */}
+          <div className="flex flex-wrap gap-2 mb-10">
+            <button
+              onClick={() => setActiveCategory("Все")}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs uppercase tracking-[0.18em] border transition-all ${
+                activeCategory === "Все"
+                  ? "bg-black text-white border-transparent shadow-sm"
+                  : "bg-white text-black/70 border-black/10 hover:border-pink-300"
+              }`}
+            >
+              <Icon name="Sparkles" size={12} />
+              Все направления
+            </button>
+            {CATEGORIES.map((c) => {
+              const isActive = activeCategory === c.name
               return (
                 <button
-                  key={i}
-                  onClick={() => setSelectedEvent(ev)}
-                  className="w-[300px] flex-shrink-0 rounded-3xl bg-white border border-black/5 shadow-sm overflow-hidden flex flex-col text-left hover:-translate-y-1 hover:shadow-md transition-all duration-300"
+                  key={c.name}
+                  onClick={() => setActiveCategory(c.name)}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs uppercase tracking-[0.18em] border transition-all ${
+                    isActive
+                      ? `bg-gradient-to-r ${c.color} text-white border-transparent shadow-sm`
+                      : "bg-white text-black/70 border-black/10 hover:border-pink-300"
+                  }`}
                 >
-                  <div className={`bg-gradient-to-br ${meta.color} h-2`} />
-                  <div className="p-6 flex flex-col flex-1">
-                    <span className="self-start text-[10px] uppercase tracking-[0.2em] text-pink-600 mb-3">
-                      {ev.category}
-                    </span>
-                    <h3
-                      className="text-xl leading-snug mb-3"
-                      style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
-                    >
-                      {ev.title}
-                    </h3>
-                    <p className="text-sm text-black/65 leading-relaxed mb-5">
-                      {ev.description}
-                    </p>
-                    <div className="mt-auto inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-pink-600">
-                      Подробнее
-                      <Icon name="ArrowRight" size={12} />
-                    </div>
-                  </div>
+                  <Icon name={c.icon} size={12} />
+                  {c.name}
                 </button>
+              )
+            })}
+          </div>
+
+          {/* Category windows */}
+          <div className="space-y-12">
+            {visibleCategories.map((cat) => {
+              const items = eventsByCategory.get(cat.name) || []
+              if (items.length === 0) return null
+              return (
+                <div
+                  key={cat.name}
+                  className="rounded-[28px] bg-white border border-black/5 shadow-sm overflow-hidden"
+                >
+                  <div
+                    className={`bg-gradient-to-r ${cat.color} text-white px-7 py-6 flex items-center justify-between gap-4`}
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0">
+                        <Icon name={cat.icon} size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] uppercase tracking-[0.28em] opacity-90">
+                          Направление
+                        </div>
+                        <h3
+                          className="text-2xl md:text-3xl leading-tight truncate"
+                          style={{
+                            fontFamily: "'Cormorant Garamond', serif",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {cat.name}
+                        </h3>
+                      </div>
+                    </div>
+                    <span className="hidden md:inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.22em]">
+                      {items.length}{" "}
+                      {items.length === 1
+                        ? "событие"
+                        : items.length < 5
+                          ? "события"
+                          : "событий"}
+                    </span>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                    {items.map((ev, i) => {
+                      const dt = new Date(ev.date)
+                      const day = dt.toLocaleDateString("ru-RU", {
+                        day: "numeric",
+                        month: "short",
+                      })
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedEvent(ev)}
+                          className="group relative text-left rounded-2xl border border-black/5 bg-gradient-to-br from-white to-pink-50/30 p-5 hover:-translate-y-1 hover:shadow-md hover:border-pink-200 transition-all duration-300 flex flex-col"
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.22em] text-pink-600 bg-pink-50 rounded-full px-2.5 py-1">
+                              <Icon name="Calendar" size={10} />
+                              {day}
+                            </span>
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-black/45">
+                              {ev.time}
+                            </span>
+                          </div>
+                          <h4
+                            className="text-lg leading-snug mb-2 text-black/85"
+                            style={{
+                              fontFamily: "'Cormorant Garamond', serif",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {ev.title}
+                          </h4>
+                          <p className="text-[13px] text-black/60 leading-relaxed mb-4 line-clamp-3">
+                            {ev.description}
+                          </p>
+                          <div className="mt-auto flex items-center justify-between">
+                            <span className="text-xs font-medium text-black/75">
+                              {ev.price === 0
+                                ? "Для резидентов"
+                                : `${ev.price.toLocaleString("ru-RU")} ₽`}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.2em] text-pink-600 group-hover:gap-2 transition-all">
+                              Подробнее
+                              <Icon name="ArrowRight" size={11} />
+                            </span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               )
             })}
           </div>
@@ -173,7 +282,11 @@ export default function AboutSpeakersAndEvents() {
                       <Icon name="Wallet" size={16} className="text-pink-600 mt-0.5" />
                       <div>
                         <div className="text-[10px] uppercase tracking-[0.2em] text-black/50">Стоимость</div>
-                        <div className="text-black/80 font-medium">{selectedEvent.price.toLocaleString("ru-RU")} ₽</div>
+                        <div className="text-black/80 font-medium">
+                          {selectedEvent.price === 0
+                            ? "Бесплатно для резидентов"
+                            : `${selectedEvent.price.toLocaleString("ru-RU")} ₽`}
+                        </div>
                       </div>
                     </div>
                   </div>
