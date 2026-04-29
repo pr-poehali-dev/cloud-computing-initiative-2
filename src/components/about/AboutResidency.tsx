@@ -28,7 +28,7 @@ const RESIDENCY_PLANS: ResidencyPlan[] = [
     id: "month",
     title: "Резидентство «Знакомство»",
     duration: "1 месяц",
-    price: 18000,
+    price: 14000,
     perks: [
       "Доступ ко всем встречам месяца",
       "Закрытый чат участниц",
@@ -39,11 +39,26 @@ const RESIDENCY_PLANS: ResidencyPlan[] = [
     icon: "Sparkles",
   },
   {
+    id: "quarter",
+    title: "Резидентство «Тёплый старт»",
+    duration: "3 месяца",
+    price: 36000,
+    oldPrice: 42000,
+    perks: [
+      "Все мероприятия 3 месяца без ограничений",
+      "Закрытый чат и круги поддержки",
+      "Личное знакомство с командой клуба",
+      "Скидка 12% на индивидуальные сессии",
+    ],
+    accent: "from-rose-400 to-pink-500",
+    icon: "Heart",
+  },
+  {
     id: "halfYear",
     title: "Резидентство «Близкий круг»",
     duration: "6 месяцев",
-    price: 89000,
-    oldPrice: 108000,
+    price: 54000,
+    oldPrice: 84000,
     badge: "Популярный",
     highlight: true,
     perks: [
@@ -59,9 +74,9 @@ const RESIDENCY_PLANS: ResidencyPlan[] = [
   {
     id: "year",
     title: "Резидентство «Навсегда наша»",
-    duration: "1 год",
-    price: 165000,
-    oldPrice: 216000,
+    duration: "12 месяцев",
+    price: 84000,
+    oldPrice: 168000,
     badge: "Премиум",
     perks: [
       "Год без ограничений на встречах",

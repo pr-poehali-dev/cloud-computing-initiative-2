@@ -47,7 +47,7 @@ const CARDS: PreviewCard[] = [
     accent: "from-fuchsia-500 to-pink-600",
     image:
       "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/5c4bf05c-35f8-4749-b418-c0e1cca8c492.jpg",
-    meta: "3 тарифа",
+    meta: "4 тарифа",
   },
   {
     to: "/about/partnership",
