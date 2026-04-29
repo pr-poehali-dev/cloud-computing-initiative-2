@@ -2,7 +2,7 @@ import Icon from "@/components/ui/icon"
 import SectionHeading from "@/components/about/SectionHeading"
 
 const FOUNDER_PHOTO =
-  "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/349d889f-422a-4043-8672-fc7de079d848.jpeg"
+  "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/730bdab3-0cef-4810-afab-704db40f3d73.jpg"
 
 const INTERVIEW = [
   {
