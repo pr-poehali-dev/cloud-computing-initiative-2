@@ -16,16 +16,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const ABOUT_SECTIONS: { id: string; title: string; icon: string }[] = [
-  { id: "about", title: "О клубе", icon: "Sparkles" },
-  { id: "founder", title: "Владелица клуба", icon: "Crown" },
-  { id: "speakers", title: "Спикеры", icon: "Mic" },
-  { id: "events", title: "Мероприятия", icon: "CalendarHeart" },
-  { id: "residency", title: "Резидентство", icon: "Gem" },
-  { id: "partnership", title: "Партнёрство", icon: "Handshake" },
-  { id: "gallery", title: "Галерея", icon: "Camera" },
-  { id: "testimonials", title: "Отзывы", icon: "Quote" },
-  { id: "cta", title: "Вступить в клуб", icon: "Heart" },
+const ABOUT_SECTIONS: { to: string; title: string; icon: string }[] = [
+  { to: "/about", title: "Узнать о клубе", icon: "Sparkles" },
+  { to: "/about/speakers", title: "Спикеры", icon: "Mic" },
+  { to: "/about/events", title: "Мероприятия", icon: "CalendarHeart" },
+  { to: "/about/residency", title: "Резидентство", icon: "Gem" },
+  { to: "/about/partnership", title: "Партнёрство", icon: "Handshake" },
+  { to: "/about/gallery", title: "Галерея", icon: "Camera" },
+  { to: "/about/testimonials", title: "Отзывы", icon: "Quote" },
+  { to: "/about/join", title: "Вступить в клуб", icon: "Heart" },
 ]
 
 export default function Header() {
@@ -65,11 +64,8 @@ export default function Header() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {ABOUT_SECTIONS.map((s) => (
-                <DropdownMenuItem key={s.id} asChild className="cursor-pointer">
-                  <Link
-                    to={`/about#${s.id}`}
-                    className="flex items-center gap-2.5 py-2"
-                  >
+                <DropdownMenuItem key={s.to} asChild className="cursor-pointer">
+                  <Link to={s.to} className="flex items-center gap-2.5 py-2">
                     <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white">
                       <Icon name={s.icon} size={13} />
                     </span>
