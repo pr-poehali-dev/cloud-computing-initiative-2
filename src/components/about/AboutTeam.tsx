@@ -12,7 +12,7 @@ interface Member {
 const TEAM: Member[] = [
   {
     photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/680591c2-b161-4342-803c-6dcc1dffca63.jpg",
+      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/6b4fd03e-9b33-4641-88db-89b6c7ee19aa.jpg",
     firstName: "Юлия",
     lastName: "Мустафина",
     role: "Основательница клуба",
