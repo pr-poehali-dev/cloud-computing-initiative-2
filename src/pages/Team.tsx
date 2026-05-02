@@ -19,7 +19,12 @@ import { useTestimonials } from "@/contexts/TestimonialsContext"
 import { useTeamChat } from "@/contexts/TeamChatContext"
 import { useNotifications } from "@/contexts/NotificationsContext"
 import { useEventSuggestions } from "@/contexts/EventSuggestionsContext"
-import { EVENTS, CATEGORIES, type ClubEvent, type EventCategory } from "@/data/events"
+import {
+  useCategories,
+  CATEGORY_PRESETS,
+  type CategoryItem,
+} from "@/contexts/CategoriesContext"
+import { EVENTS, type ClubEvent } from "@/data/events"
 
 type Tab =
   | "dashboard"
@@ -572,6 +577,7 @@ function EventsTab() {
   const [customEvents, setCustomEvents] = useState<CustomEvent[]>([])
   const [editing, setEditing] = useState<CustomEvent | null>(null)
   const [creating, setCreating] = useState(false)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
 
   useEffect(() => {
     setCustomEvents(readCustomEvents())
@@ -631,14 +637,27 @@ function EventsTab() {
             Базовые события из календаря и созданные командой
           </p>
         </div>
-        <button
-          onClick={() => setCreating(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white text-xs uppercase tracking-[0.2em]"
-        >
-          <Icon name="Plus" size={14} />
-          Создать
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => setCategoriesOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-black/10 hover:bg-black/5 text-xs uppercase tracking-[0.2em]"
+          >
+            <Icon name="Tag" size={14} />
+            Категории
+          </button>
+          <button
+            onClick={() => setCreating(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white text-xs uppercase tracking-[0.2em]"
+          >
+            <Icon name="Plus" size={14} />
+            Создать
+          </button>
+        </div>
       </div>
+
+      {categoriesOpen && (
+        <CategoriesManager open={categoriesOpen} onOpenChange={setCategoriesOpen} />
+      )}
 
       {customEvents.length > 0 && (
         <Panel title="Команда добавила" icon="Star">
@@ -724,10 +743,13 @@ function EventForm({
   onCancel: () => void
   onSave: (ev: CustomEvent) => void
 }) {
+  const { categories } = useCategories()
   const [title, setTitle] = useState(initial?.title || "")
   const [date, setDate] = useState(initial?.date || "")
   const [time, setTime] = useState(initial?.time || "")
-  const [category, setCategory] = useState<EventCategory>(initial?.category || "Девичники")
+  const [category, setCategory] = useState<string>(
+    initial?.category || categories[0]?.name || "Девичники"
+  )
   const [location, setLocation] = useState(initial?.location || "")
   const [price, setPrice] = useState<string>(String(initial?.price ?? ""))
   const [speaker, setSpeaker] = useState(initial?.speaker || "")
@@ -744,7 +766,7 @@ function EventForm({
       title,
       date,
       time,
-      category,
+      category: category as ClubEvent["category"],
       location,
       price: Number(price) || 0,
       speaker: speaker || undefined,
@@ -788,10 +810,10 @@ function EventForm({
               <Label>Категория</Label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as EventCategory)}
+                onChange={(e) => setCategory(e.target.value)}
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
               >
-                {CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <option key={c.name} value={c.name}>
                     {c.name}
                   </option>
@@ -1859,5 +1881,262 @@ function Field({ label, value }: { label: string; value?: string }) {
       <Label className="text-[10px] uppercase tracking-[0.2em] text-black/50">{label}</Label>
       <div className="text-sm mt-0.5 break-words">{value || "—"}</div>
     </div>
+  )
+}
+
+/* ───────── Categories Manager ───────── */
+
+function CategoriesManager({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+}) {
+  const { categories, addCategory, updateCategory, deleteCategory, resetAll } =
+    useCategories()
+  const [editing, setEditing] = useState<CategoryItem | null>(null)
+  const [creating, setCreating] = useState(false)
+
+  const handleDelete = (cat: CategoryItem) => {
+    if (!window.confirm(`Удалить категорию «${cat.name}»?`)) return
+    if (deleteCategory(cat.name)) toast.success("Категория удалена")
+    else toast.error("Не удалось удалить")
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[640px] max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Icon name="Tag" size={18} className="text-pink-600" />
+              Категории мероприятий
+            </DialogTitle>
+            <DialogDescription>
+              Переименовывай, меняй иконку и цвет, добавляй новые направления
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex justify-between items-center gap-2 flex-wrap pt-1">
+            <button
+              onClick={() => setCreating(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white text-xs uppercase tracking-[0.2em]"
+            >
+              <Icon name="Plus" size={14} />
+              Новая категория
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm("Сбросить все изменения категорий к исходному состоянию?"))
+                  resetAll()
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-black/10 hover:bg-black/5 text-xs uppercase tracking-[0.2em] text-black/60"
+            >
+              <Icon name="RotateCcw" size={14} />
+              Сбросить
+            </button>
+          </div>
+
+          <ul className="mt-3 divide-y divide-black/5 rounded-2xl border border-black/5 overflow-hidden">
+            {categories.map((c) => (
+              <li
+                key={c.name}
+                className="px-4 py-3 flex items-center gap-3 bg-white"
+              >
+                <span
+                  className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br ${c.color} text-white flex-shrink-0`}
+                >
+                  <Icon name={c.icon} size={16} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate flex items-center gap-2 flex-wrap">
+                    {c.name}
+                    {!c.builtIn && (
+                      <span className="text-[9px] uppercase tracking-[0.18em] text-pink-700 bg-pink-50 rounded-full px-2 py-0.5">
+                        Своя
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-black/45">{c.icon}</div>
+                </div>
+                <button
+                  onClick={() => setEditing(c)}
+                  className="p-2 rounded-full hover:bg-black/5"
+                  title="Редактировать"
+                >
+                  <Icon name="Pencil" size={14} />
+                </button>
+                <button
+                  onClick={() => handleDelete(c)}
+                  className="p-2 rounded-full hover:bg-red-50 text-red-500"
+                  title="Удалить"
+                >
+                  <Icon name="Trash2" size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <p className="text-[11px] text-black/45 mt-2">
+            Базовые мероприятия из календаря привязаны к исходным названиям категорий и могут
+            не отобразиться, если категория удалена.
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      {creating && (
+        <CategoryForm
+          initial={null}
+          onCancel={() => setCreating(false)}
+          onSave={(data) => {
+            const ok = addCategory(data)
+            if (ok) {
+              toast.success("Категория добавлена")
+              setCreating(false)
+            } else {
+              toast.error("Такая категория уже есть")
+            }
+          }}
+        />
+      )}
+      {editing && (
+        <CategoryForm
+          initial={editing}
+          onCancel={() => setEditing(null)}
+          onSave={(data) => {
+            const ok = updateCategory(editing.name, {
+              newName: data.name,
+              icon: data.icon,
+              color: data.color,
+            })
+            if (ok) {
+              toast.success("Сохранено")
+              setEditing(null)
+            } else {
+              toast.error("Категория с таким названием уже существует")
+            }
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+function CategoryForm({
+  initial,
+  onCancel,
+  onSave,
+}: {
+  initial: CategoryItem | null
+  onCancel: () => void
+  onSave: (data: { name: string; icon: string; color: string }) => void
+}) {
+  const [name, setName] = useState(initial?.name || "")
+  const [icon, setIcon] = useState(initial?.icon || CATEGORY_PRESETS.icons[0])
+  const [color, setColor] = useState(initial?.color || CATEGORY_PRESETS.colors[0])
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) {
+      toast.error("Введи название")
+      return
+    }
+    onSave({ name: name.trim(), icon, color })
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent className="sm:max-w-[520px] max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {initial ? "Редактировать категорию" : "Новая категория"}
+          </DialogTitle>
+          <DialogDescription>
+            Название, иконка и градиент — как будет выглядеть направление
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="space-y-4">
+          <div className="rounded-2xl bg-stone-50 p-4 flex items-center gap-3">
+            <span
+              className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br ${color} text-white`}
+            >
+              <Icon name={icon} size={18} />
+            </span>
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.22em] text-black/45">
+                Превью
+              </div>
+              <div
+                className="text-lg"
+                style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+              >
+                {name || "Название"}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Название*</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+
+          <div className="space-y-1">
+            <Label>Иконка</Label>
+            <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+              {CATEGORY_PRESETS.icons.map((ic) => (
+                <button
+                  key={ic}
+                  type="button"
+                  onClick={() => setIcon(ic)}
+                  className={`aspect-square rounded-xl flex items-center justify-center transition-all ${
+                    icon === ic
+                      ? "bg-pink-600 text-white shadow"
+                      : "bg-stone-100 text-black/65 hover:bg-pink-50"
+                  }`}
+                  title={ic}
+                >
+                  <Icon name={ic} size={16} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Цвет</Label>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {CATEGORY_PRESETS.colors.map((cl) => (
+                <button
+                  key={cl}
+                  type="button"
+                  onClick={() => setColor(cl)}
+                  className={`h-10 rounded-xl bg-gradient-to-br ${cl} ring-2 ring-offset-2 transition-all ${
+                    color === cl ? "ring-pink-600" : "ring-transparent"
+                  }`}
+                  title={cl}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 px-4 py-2.5 rounded-full border border-black/15 text-xs uppercase tracking-[0.2em] hover:bg-black/5"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2.5 rounded-full bg-pink-600 text-white text-xs uppercase tracking-[0.2em] hover:bg-pink-700"
+            >
+              Сохранить
+            </button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
