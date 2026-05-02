@@ -18,6 +18,7 @@ import { useNews, type NewsPost } from "@/contexts/NewsContext"
 import { useTestimonials } from "@/contexts/TestimonialsContext"
 import { useTeamChat } from "@/contexts/TeamChatContext"
 import { useNotifications } from "@/contexts/NotificationsContext"
+import { useEventSuggestions } from "@/contexts/EventSuggestionsContext"
 import { EVENTS, CATEGORIES, type ClubEvent, type EventCategory } from "@/data/events"
 
 type Tab =
@@ -211,6 +212,7 @@ function DashboardTab() {
   const { getAllUsers } = useAuth()
   const { speakerRequests, partnerRequests, residencyRequests } = useRequests()
   const { testimonials } = useTestimonials()
+  const { suggestions } = useEventSuggestions()
 
   const users = useMemo(() => getAllUsers(), [getAllUsers])
   const teamCount = users.filter((u) => u.role === "team").length
@@ -231,6 +233,7 @@ function DashboardTab() {
   const newSpeakers = speakerRequests.filter((r) => r.status === "new").length
   const newPartners = partnerRequests.filter((r) => r.status === "new").length
   const pendingTestimonials = testimonials.filter((t) => t.status === "pending").length
+  const newSuggestions = suggestions.filter((s) => s.status === "new").length
 
   const recentMembers = [...users]
     .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime())
@@ -281,6 +284,12 @@ function DashboardTab() {
           icon="MessageSquareQuote"
           value={pendingTestimonials}
           label="Отзывов на модерации"
+        />
+        <MetricCard
+          icon="Lightbulb"
+          value={newSuggestions}
+          label="Идей мероприятий"
+          sublabel="новые"
         />
         <MetricCard
           icon="Wallet"
@@ -843,7 +852,11 @@ function EventForm({
 /* ───────── Requests ───────── */
 
 function RequestsTab() {
-  const [sub, setSub] = useState<"speakers" | "partners" | "residency">("speakers")
+  const [sub, setSub] = useState<"speakers" | "partners" | "residency" | "ideas">(
+    "speakers"
+  )
+  const { suggestions } = useEventSuggestions()
+  const newIdeasCount = suggestions.filter((s) => s.status === "new").length
 
   return (
     <div className="space-y-4">
@@ -853,6 +866,7 @@ function RequestsTab() {
             { id: "speakers", label: "Спикеры", icon: "Mic" },
             { id: "partners", label: "Партнёры", icon: "Handshake" },
             { id: "residency", label: "Резидентство", icon: "Home" },
+            { id: "ideas", label: "Идеи мероприятий", icon: "Lightbulb" },
           ] as const
         ).map((s) => (
           <button
@@ -864,6 +878,15 @@ function RequestsTab() {
           >
             <Icon name={s.icon} size={14} />
             {s.label}
+            {s.id === "ideas" && newIdeasCount > 0 && (
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                  sub === s.id ? "bg-white text-black" : "bg-pink-100 text-pink-700"
+                }`}
+              >
+                {newIdeasCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -871,6 +894,102 @@ function RequestsTab() {
       {sub === "speakers" && <SpeakerRequests />}
       {sub === "partners" && <PartnerRequests />}
       {sub === "residency" && <ResidencyRequests />}
+      {sub === "ideas" && <SuggestionRequests />}
+    </div>
+  )
+}
+
+function SuggestionRequests() {
+  const { suggestions, updateSuggestion, deleteSuggestion } = useEventSuggestions()
+  const [open, setOpen] = useState<string | null>(null)
+
+  if (suggestions.length === 0) return <Empty text="Идей от участниц пока нет" />
+
+  return (
+    <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+      <ul className="divide-y divide-black/5">
+        {suggestions.map((s) => (
+          <li key={s.id} className="px-4 py-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="inline-flex w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-fuchsia-500 text-white items-center justify-center flex-shrink-0">
+                <Icon name="Lightbulb" size={14} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{s.title}</div>
+                <div className="text-xs text-black/55 truncate">
+                  {s.authorName} · {s.category}
+                  {s.format ? ` · ${s.format}` : ""}
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 text-xs text-pink-600 bg-pink-50 rounded-full px-2 py-0.5">
+                <Icon name="Heart" size={11} />
+                {s.votes.length}
+              </span>
+              <StatusBadge status={s.status} />
+              <button
+                onClick={() => setOpen(open === s.id ? null : s.id)}
+                className="text-xs text-black/55 hover:text-black underline"
+              >
+                {open === s.id ? "Свернуть" : "Подробнее"}
+              </button>
+              <select
+                value={s.status}
+                onChange={(e) =>
+                  updateSuggestion(s.id, {
+                    status: e.target.value as RequestStatus,
+                  })
+                }
+                className="h-9 text-xs rounded-md border border-input bg-background px-2"
+              >
+                {(Object.keys(STATUS_LABEL) as RequestStatus[]).map((st) => (
+                  <option key={st} value={st}>
+                    {STATUS_LABEL[st]}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => {
+                  if (window.confirm("Удалить идею?")) deleteSuggestion(s.id)
+                }}
+                className="p-2 rounded-full hover:bg-red-50 text-red-500"
+                title="Удалить"
+              >
+                <Icon name="Trash2" size={14} />
+              </button>
+            </div>
+            {open === s.id && (
+              <div className="mt-3 grid sm:grid-cols-2 gap-2 text-xs bg-black/[0.02] rounded-xl p-3">
+                <Field label="Контакт" value={s.contact} />
+                <Field label="Желаемая дата" value={s.preferredDate} />
+                <Field label="Готова прийти" value={s.willAttend ? "Да" : "Нет"} />
+                <Field label="Голосов" value={String(s.votes.length)} />
+                <div className="sm:col-span-2">
+                  <Label className="text-[10px] uppercase tracking-[0.2em] text-black/50">
+                    Идея
+                  </Label>
+                  <p className="text-sm mt-1 whitespace-pre-wrap">{s.description}</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <Label className="text-[10px] uppercase tracking-[0.2em] text-black/50">
+                    Комментарий команды
+                  </Label>
+                  <Textarea
+                    rows={2}
+                    defaultValue={s.teamComment || ""}
+                    onBlur={(e) =>
+                      updateSuggestion(s.id, { teamComment: e.target.value })
+                    }
+                    placeholder="Заметки..."
+                  />
+                </div>
+                <div className="text-[11px] text-black/45 sm:col-span-2">
+                  Создана: {formatDateTime(s.createdAt)}
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

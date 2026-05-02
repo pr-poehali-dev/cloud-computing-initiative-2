@@ -21,6 +21,7 @@ import { RequestsProvider } from "@/contexts/RequestsContext";
 import { NewsProvider } from "@/contexts/NewsContext";
 import { TestimonialsProvider } from "@/contexts/TestimonialsContext";
 import { TeamChatProvider } from "@/contexts/TeamChatContext";
+import { EventSuggestionsProvider } from "@/contexts/EventSuggestionsContext";
 import Team from "./pages/Team";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <NewsProvider>
               <TestimonialsProvider>
                 <TeamChatProvider>
+                  <EventSuggestionsProvider>
                   <TooltipProvider>
                     <Toaster />
                     <Sonner />
@@ -54,6 +56,7 @@ const App = () => (
                       </Routes>
                     </BrowserRouter>
                   </TooltipProvider>
+                  </EventSuggestionsProvider>
                 </TeamChatProvider>
               </TestimonialsProvider>
             </NewsProvider>
