@@ -24,27 +24,37 @@ import {
   CATEGORY_PRESETS,
   type CategoryItem,
 } from "@/contexts/CategoriesContext"
+import {
+  useDirectory,
+  PARTNER_ACCENTS,
+  PARTNER_ICONS,
+  type Speaker,
+  type Resident,
+  type Partner,
+} from "@/contexts/DirectoryContext"
 import { EVENTS, type ClubEvent } from "@/data/events"
 
 type Tab =
   | "dashboard"
   | "members"
   | "events"
+  | "directory"
   | "requests"
   | "testimonials"
   | "news"
   | "broadcasts"
   | "chat"
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "dashboard", label: "Дашборд", icon: "BarChart3" },
-  { id: "members", label: "Участницы", icon: "Users" },
-  { id: "events", label: "Мероприятия", icon: "CalendarDays" },
-  { id: "requests", label: "Заявки", icon: "Inbox" },
-  { id: "testimonials", label: "Отзывы", icon: "MessageSquareQuote" },
-  { id: "news", label: "Новости", icon: "Newspaper" },
-  { id: "broadcasts", label: "Рассылки", icon: "Send" },
-  { id: "chat", label: "Чат команды", icon: "Lock" },
+const TABS: { id: Tab; label: string; icon: string; description?: string }[] = [
+  { id: "dashboard", label: "Дашборд", icon: "BarChart3", description: "Главные метрики и сводка" },
+  { id: "members", label: "Участницы", icon: "Users", description: "База участниц клуба" },
+  { id: "events", label: "Мероприятия", icon: "CalendarDays", description: "Расписание и категории" },
+  { id: "directory", label: "Каталог клуба", icon: "BookOpen", description: "Спикеры, резиденты, партнёры" },
+  { id: "requests", label: "Заявки", icon: "Inbox", description: "Спикеры, партнёры, идеи" },
+  { id: "testimonials", label: "Отзывы", icon: "MessageSquareQuote", description: "Модерация отзывов" },
+  { id: "news", label: "Новости", icon: "Newspaper", description: "Анонсы и публикации" },
+  { id: "broadcasts", label: "Рассылки", icon: "Send", description: "Уведомления участницам" },
+  { id: "chat", label: "Чат команды", icon: "Lock", description: "Закрытое общение" },
 ]
 
 const formatDate = (iso: string) =>
@@ -171,35 +181,15 @@ export default function Team() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 grid lg:grid-cols-[240px_1fr] gap-6">
-        {/* Sidebar */}
-        <aside className="lg:sticky lg:top-6 lg:self-start">
-          <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible bg-white rounded-2xl border border-black/5 p-2 shadow-sm">
-            {TABS.map((t) => {
-              const active = tab === t.id
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm whitespace-nowrap transition-colors ${
-                    active
-                      ? "bg-gradient-to-r from-amber-100 via-pink-100 to-fuchsia-100 text-pink-700 font-medium"
-                      : "text-black/65 hover:bg-black/[0.03]"
-                  }`}
-                >
-                  <Icon name={t.icon} size={16} />
-                  {t.label}
-                </button>
-              )
-            })}
-          </nav>
-        </aside>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+        <SectionMenu activeTab={tab} onChange={setTab} />
 
         {/* Content */}
         <main className="min-w-0">
           {tab === "dashboard" && <DashboardTab />}
           {tab === "members" && <MembersTab />}
           {tab === "events" && <EventsTab />}
+          {tab === "directory" && <DirectoryTab />}
           {tab === "requests" && <RequestsTab />}
           {tab === "testimonials" && <TestimonialsTab />}
           {tab === "news" && <NewsTab />}
@@ -2138,5 +2128,805 @@ function CategoryForm({
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/* ───────── Section menu (dropdown) ───────── */
+
+function SectionMenu({
+  activeTab,
+  onChange,
+}: {
+  activeTab: Tab
+  onChange: (t: Tab) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const active = TABS.find((t) => t.id === activeTab)
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full bg-white rounded-2xl border border-black/5 shadow-sm px-5 py-4 flex items-center gap-3 hover:bg-pink-50/50 transition-colors"
+      >
+        <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-pink-500 to-fuchsia-600 text-white flex-shrink-0">
+          <Icon name={active?.icon || "LayoutGrid"} size={16} />
+        </span>
+        <div className="flex-1 text-left min-w-0">
+          <div className="text-[10px] uppercase tracking-[0.22em] text-pink-600">
+            Раздел панели
+          </div>
+          <div className="text-base font-medium truncate">{active?.label || "Меню"}</div>
+          {active?.description && (
+            <div className="text-xs text-black/50 truncate">{active.description}</div>
+          )}
+        </div>
+        <Icon
+          name={open ? "ChevronUp" : "ChevronDown"}
+          size={18}
+          className="text-black/40 flex-shrink-0"
+        />
+      </button>
+
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-30"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+          <div className="absolute z-40 mt-2 left-0 right-0 bg-white rounded-2xl border border-black/10 shadow-xl overflow-hidden">
+            <ul className="max-h-[70vh] overflow-y-auto">
+              {TABS.map((t) => {
+                const isActive = t.id === activeTab
+                return (
+                  <li key={t.id}>
+                    <button
+                      onClick={() => {
+                        onChange(t.id)
+                        setOpen(false)
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                        isActive
+                          ? "bg-gradient-to-r from-amber-50 via-pink-50 to-fuchsia-50"
+                          : "hover:bg-black/[0.03]"
+                      }`}
+                    >
+                      <span
+                        className={`inline-flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 ${
+                          isActive
+                            ? "bg-gradient-to-br from-amber-400 via-pink-500 to-fuchsia-600 text-white"
+                            : "bg-stone-100 text-black/65"
+                        }`}
+                      >
+                        <Icon name={t.icon} size={14} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className={`text-sm ${
+                            isActive ? "font-medium text-pink-700" : "text-black/85"
+                          }`}
+                        >
+                          {t.label}
+                        </div>
+                        {t.description && (
+                          <div className="text-[11px] text-black/50 truncate">
+                            {t.description}
+                          </div>
+                        )}
+                      </div>
+                      {isActive && (
+                        <Icon name="Check" size={14} className="text-pink-600" />
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+/* ───────── Directory tab (Speakers / Residents / Partners) ───────── */
+
+type DirSub = "speakers" | "residents" | "partners"
+
+function DirectoryTab() {
+  const [sub, setSub] = useState<DirSub>("speakers")
+  const {
+    speakers,
+    residents,
+    partners,
+    resetSpeakers,
+    resetResidents,
+    resetPartners,
+  } = useDirectory()
+
+  const counts = {
+    speakers: speakers.length,
+    residents: residents.length,
+    partners: partners.length,
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-black/5 p-2 flex gap-1 overflow-x-auto">
+        {(
+          [
+            { id: "speakers", label: "Спикеры", icon: "Mic" },
+            { id: "residents", label: "Резиденты", icon: "Heart" },
+            { id: "partners", label: "Партнёры", icon: "Handshake" },
+          ] as const
+        ).map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setSub(s.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm whitespace-nowrap transition-colors ${
+              sub === s.id ? "bg-black text-white" : "text-black/65 hover:bg-black/[0.04]"
+            }`}
+          >
+            <Icon name={s.icon} size={14} />
+            {s.label}
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                sub === s.id ? "bg-white text-black" : "bg-black/[0.05] text-black/55"
+              }`}
+            >
+              {counts[s.id]}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {sub === "speakers" && <SpeakersManager onReset={resetSpeakers} />}
+      {sub === "residents" && <ResidentsManager onReset={resetResidents} />}
+      {sub === "partners" && <PartnersManager onReset={resetPartners} />}
+    </div>
+  )
+}
+
+function ManagerToolbar({
+  title,
+  subtitle,
+  onAdd,
+  onReset,
+}: {
+  title: string
+  subtitle: string
+  onAdd: () => void
+  onReset: () => void
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-black/5 p-4 flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <h2
+          className="text-xl"
+          style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+        >
+          {title}
+        </h2>
+        <p className="text-xs text-black/55 mt-0.5">{subtitle}</p>
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => {
+            if (window.confirm("Сбросить к исходному списку?")) onReset()
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-black/10 hover:bg-black/5 text-xs uppercase tracking-[0.2em] text-black/60"
+        >
+          <Icon name="RotateCcw" size={14} />
+          Сбросить
+        </button>
+        <button
+          onClick={onAdd}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white text-xs uppercase tracking-[0.2em]"
+        >
+          <Icon name="Plus" size={14} />
+          Добавить
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function SpeakersManager({ onReset }: { onReset: () => void }) {
+  const { speakers, addSpeaker, updateSpeaker, deleteSpeaker } = useDirectory()
+  const [editing, setEditing] = useState<Speaker | null>(null)
+  const [creating, setCreating] = useState(false)
+
+  const handleDelete = (s: Speaker) => {
+    if (!window.confirm(`Удалить спикера «${s.name}»?`)) return
+    deleteSpeaker(s.id)
+    toast.success("Удалено")
+  }
+
+  return (
+    <div className="space-y-3">
+      <ManagerToolbar
+        title="Спикеры клуба"
+        subtitle="Эксперты и приглашённые гости — отображаются на странице «Спикеры»"
+        onAdd={() => setCreating(true)}
+        onReset={onReset}
+      />
+
+      {speakers.length === 0 ? (
+        <Empty text="Пока нет спикеров" />
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {speakers.map((s) => (
+            <div
+              key={s.id}
+              className="bg-white rounded-2xl border border-black/5 p-4 flex gap-3"
+            >
+              <div className="w-16 h-20 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
+                {s.photo ? (
+                  <img src={s.photo} alt={s.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-black/30">
+                    <Icon name="Image" size={20} />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{s.name}</div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-pink-600 mt-0.5 truncate">
+                  {s.role}
+                </div>
+                <p className="text-xs text-black/65 mt-1.5 line-clamp-2">{s.bio}</p>
+                <div className="mt-2 flex gap-1">
+                  <button
+                    onClick={() => setEditing(s)}
+                    className="p-1.5 rounded-full hover:bg-black/5"
+                    title="Редактировать"
+                  >
+                    <Icon name="Pencil" size={13} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(s)}
+                    className="p-1.5 rounded-full hover:bg-red-50 text-red-500"
+                    title="Удалить"
+                  >
+                    <Icon name="Trash2" size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(creating || editing) && (
+        <SpeakerForm
+          initial={editing}
+          onCancel={() => {
+            setCreating(false)
+            setEditing(null)
+          }}
+          onSave={(data) => {
+            if (editing) {
+              updateSpeaker(editing.id, data)
+              toast.success("Спикер обновлён")
+            } else {
+              addSpeaker(data)
+              toast.success("Спикер добавлен")
+            }
+            setCreating(false)
+            setEditing(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function SpeakerForm({
+  initial,
+  onCancel,
+  onSave,
+}: {
+  initial: Speaker | null
+  onCancel: () => void
+  onSave: (data: Omit<Speaker, "id">) => void
+}) {
+  const [name, setName] = useState(initial?.name || "")
+  const [role, setRole] = useState(initial?.role || "")
+  const [bio, setBio] = useState(initial?.bio || "")
+  const [photo, setPhoto] = useState(initial?.photo || "")
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const onFile = (f?: File) => {
+    if (!f) return
+    const reader = new FileReader()
+    reader.onload = () => setPhoto(reader.result as string)
+    reader.readAsDataURL(f)
+  }
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim() || !role.trim()) {
+      toast.error("Заполни имя и роль")
+      return
+    }
+    onSave({ name: name.trim(), role: role.trim(), bio: bio.trim(), photo })
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent className="sm:max-w-[520px] max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{initial ? "Редактировать спикера" : "Новый спикер"}</DialogTitle>
+          <DialogDescription>Карточка эксперта на странице «Спикеры»</DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="space-y-3">
+          <PhotoField photo={photo} onChange={setPhoto} fileRef={fileRef} onFile={onFile} />
+          <div className="space-y-1">
+            <Label>Имя*</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div className="space-y-1">
+            <Label>Роль / специальность*</Label>
+            <Input value={role} onChange={(e) => setRole(e.target.value)} required />
+          </div>
+          <div className="space-y-1">
+            <Label>Биография</Label>
+            <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} />
+          </div>
+          <FormButtons onCancel={onCancel} />
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ResidentsManager({ onReset }: { onReset: () => void }) {
+  const { residents, addResident, updateResident, deleteResident } = useDirectory()
+  const [editing, setEditing] = useState<Resident | null>(null)
+  const [creating, setCreating] = useState(false)
+
+  const handleDelete = (r: Resident) => {
+    if (!window.confirm(`Удалить резидентку «${r.name}»?`)) return
+    deleteResident(r.id)
+    toast.success("Удалено")
+  }
+
+  return (
+    <div className="space-y-3">
+      <ManagerToolbar
+        title="Резидентки клуба"
+        subtitle="Карусель действующих резиденток на странице «Резидентство»"
+        onAdd={() => setCreating(true)}
+        onReset={onReset}
+      />
+
+      {residents.length === 0 ? (
+        <Empty text="Пока нет резиденток" />
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {residents.map((r) => (
+            <div
+              key={r.id}
+              className="bg-white rounded-2xl border border-black/5 p-4 flex gap-3"
+            >
+              <div className="w-16 h-20 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
+                {r.photo ? (
+                  <img src={r.photo} alt={r.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-black/30">
+                    <Icon name="Image" size={20} />
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{r.name}</div>
+                <div className="text-[11px] text-black/55 truncate">{r.role}</div>
+                <div className="text-[10px] uppercase tracking-[0.18em] text-pink-600 mt-0.5">
+                  {r.since}
+                </div>
+                <p className="text-xs text-black/65 mt-1.5 line-clamp-2 italic">«{r.quote}»</p>
+                <div className="mt-2 flex gap-1">
+                  <button
+                    onClick={() => setEditing(r)}
+                    className="p-1.5 rounded-full hover:bg-black/5"
+                    title="Редактировать"
+                  >
+                    <Icon name="Pencil" size={13} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(r)}
+                    className="p-1.5 rounded-full hover:bg-red-50 text-red-500"
+                    title="Удалить"
+                  >
+                    <Icon name="Trash2" size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(creating || editing) && (
+        <ResidentForm
+          initial={editing}
+          onCancel={() => {
+            setCreating(false)
+            setEditing(null)
+          }}
+          onSave={(data) => {
+            if (editing) {
+              updateResident(editing.id, data)
+              toast.success("Резидентка обновлена")
+            } else {
+              addResident(data)
+              toast.success("Резидентка добавлена")
+            }
+            setCreating(false)
+            setEditing(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function ResidentForm({
+  initial,
+  onCancel,
+  onSave,
+}: {
+  initial: Resident | null
+  onCancel: () => void
+  onSave: (data: Omit<Resident, "id">) => void
+}) {
+  const [name, setName] = useState(initial?.name || "")
+  const [role, setRole] = useState(initial?.role || "")
+  const [since, setSince] = useState(initial?.since || "")
+  const [quote, setQuote] = useState(initial?.quote || "")
+  const [photo, setPhoto] = useState(initial?.photo || "")
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const onFile = (f?: File) => {
+    if (!f) return
+    const reader = new FileReader()
+    reader.onload = () => setPhoto(reader.result as string)
+    reader.readAsDataURL(f)
+  }
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) {
+      toast.error("Введи имя")
+      return
+    }
+    onSave({
+      name: name.trim(),
+      role: role.trim(),
+      since: since.trim() || "С нами недавно",
+      quote: quote.trim(),
+      photo,
+    })
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent className="sm:max-w-[520px] max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {initial ? "Редактировать резидентку" : "Новая резидентка"}
+          </DialogTitle>
+          <DialogDescription>Карточка для карусели резидентства</DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="space-y-3">
+          <PhotoField photo={photo} onChange={setPhoto} fileRef={fileRef} onFile={onFile} />
+          <div className="space-y-1">
+            <Label>Имя*</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div className="space-y-1">
+            <Label>Роль / профессия</Label>
+            <Input value={role} onChange={(e) => setRole(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label>В клубе с</Label>
+            <Input
+              value={since}
+              onChange={(e) => setSince(e.target.value)}
+              placeholder="С нами 2 года"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Цитата</Label>
+            <Textarea value={quote} onChange={(e) => setQuote(e.target.value)} rows={2} />
+          </div>
+          <FormButtons onCancel={onCancel} />
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function PartnersManager({ onReset }: { onReset: () => void }) {
+  const { partners, addPartner, updatePartner, deletePartner } = useDirectory()
+  const [editing, setEditing] = useState<Partner | null>(null)
+  const [creating, setCreating] = useState(false)
+
+  const handleDelete = (p: Partner) => {
+    if (!window.confirm(`Удалить партнёра «${p.name}»?`)) return
+    deletePartner(p.id)
+    toast.success("Удалено")
+  }
+
+  return (
+    <div className="space-y-3">
+      <ManagerToolbar
+        title="Партнёры клуба"
+        subtitle="Бренды на странице «Партнёрство»"
+        onAdd={() => setCreating(true)}
+        onReset={onReset}
+      />
+
+      {partners.length === 0 ? (
+        <Empty text="Пока нет партнёров" />
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {partners.map((p) => (
+            <div
+              key={p.id}
+              className="bg-white rounded-2xl border border-black/5 p-4 flex gap-3"
+            >
+              <span
+                className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br ${p.accent} text-white flex-shrink-0`}
+              >
+                <Icon name={p.icon} size={20} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-pink-600">
+                  {p.category}
+                </div>
+                <div className="text-sm font-medium truncate">{p.name}</div>
+                <p className="text-xs text-black/65 mt-1 line-clamp-2">{p.description}</p>
+                <div className="mt-2 flex gap-1">
+                  <button
+                    onClick={() => setEditing(p)}
+                    className="p-1.5 rounded-full hover:bg-black/5"
+                    title="Редактировать"
+                  >
+                    <Icon name="Pencil" size={13} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p)}
+                    className="p-1.5 rounded-full hover:bg-red-50 text-red-500"
+                    title="Удалить"
+                  >
+                    <Icon name="Trash2" size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(creating || editing) && (
+        <PartnerForm
+          initial={editing}
+          onCancel={() => {
+            setCreating(false)
+            setEditing(null)
+          }}
+          onSave={(data) => {
+            if (editing) {
+              updatePartner(editing.id, data)
+              toast.success("Партнёр обновлён")
+            } else {
+              addPartner(data)
+              toast.success("Партнёр добавлен")
+            }
+            setCreating(false)
+            setEditing(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function PartnerForm({
+  initial,
+  onCancel,
+  onSave,
+}: {
+  initial: Partner | null
+  onCancel: () => void
+  onSave: (data: Omit<Partner, "id">) => void
+}) {
+  const [name, setName] = useState(initial?.name || "")
+  const [category, setCategory] = useState(initial?.category || "")
+  const [description, setDescription] = useState(initial?.description || "")
+  const [icon, setIcon] = useState(initial?.icon || PARTNER_ICONS[0])
+  const [accent, setAccent] = useState(initial?.accent || PARTNER_ACCENTS[0])
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim() || !category.trim()) {
+      toast.error("Заполни название и категорию")
+      return
+    }
+    onSave({
+      name: name.trim(),
+      category: category.trim(),
+      description: description.trim(),
+      icon,
+      accent,
+    })
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent className="sm:max-w-[520px] max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{initial ? "Редактировать партнёра" : "Новый партнёр"}</DialogTitle>
+          <DialogDescription>Карточка бренда на странице «Партнёрство»</DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="space-y-3">
+          <div className="rounded-2xl bg-stone-50 p-4 flex items-center gap-3">
+            <span
+              className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br ${accent} text-white`}
+            >
+              <Icon name={icon} size={18} />
+            </span>
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.22em] text-pink-600">
+                {category || "Категория"}
+              </div>
+              <div
+                className="text-lg"
+                style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+              >
+                {name || "Название"}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Название*</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div className="space-y-1">
+            <Label>Категория*</Label>
+            <Input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Спа, ресторан, фитнес..."
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Описание</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Иконка</Label>
+            <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+              {PARTNER_ICONS.map((ic) => (
+                <button
+                  key={ic}
+                  type="button"
+                  onClick={() => setIcon(ic)}
+                  className={`aspect-square rounded-xl flex items-center justify-center transition-all ${
+                    icon === ic
+                      ? "bg-pink-600 text-white shadow"
+                      : "bg-stone-100 text-black/65 hover:bg-pink-50"
+                  }`}
+                  title={ic}
+                >
+                  <Icon name={ic} size={16} />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Цвет</Label>
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+              {PARTNER_ACCENTS.map((cl) => (
+                <button
+                  key={cl}
+                  type="button"
+                  onClick={() => setAccent(cl)}
+                  className={`h-10 rounded-xl bg-gradient-to-br ${cl} ring-2 ring-offset-2 transition-all ${
+                    accent === cl ? "ring-pink-600" : "ring-transparent"
+                  }`}
+                  title={cl}
+                />
+              ))}
+            </div>
+          </div>
+          <FormButtons onCancel={onCancel} />
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function PhotoField({
+  photo,
+  onChange,
+  fileRef,
+  onFile,
+}: {
+  photo: string
+  onChange: (v: string) => void
+  fileRef: React.RefObject<HTMLInputElement>
+  onFile: (f?: File) => void
+}) {
+  return (
+    <div className="space-y-1">
+      <Label>Фото</Label>
+      {photo && (
+        <div className="relative w-32 aspect-[4/5] rounded-xl overflow-hidden mb-2">
+          <img src={photo} alt="" className="w-full h-full object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="absolute top-1 right-1 w-7 h-7 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black"
+          >
+            <Icon name="X" size={12} />
+          </button>
+        </div>
+      )}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-black/15 text-xs hover:bg-black/5"
+        >
+          <Icon name="ImagePlus" size={14} />
+          {photo ? "Заменить" : "Загрузить"}
+        </button>
+        <Input
+          value={photo.startsWith("data:") ? "" : photo}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="или вставь URL"
+          className="flex-1 min-w-[200px]"
+        />
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => onFile(e.target.files?.[0])}
+      />
+    </div>
+  )
+}
+
+function FormButtons({ onCancel }: { onCancel: () => void }) {
+  return (
+    <div className="flex gap-2 pt-2">
+      <button
+        type="button"
+        onClick={onCancel}
+        className="flex-1 px-4 py-2.5 rounded-full border border-black/15 text-xs uppercase tracking-[0.2em] hover:bg-black/5"
+      >
+        Отмена
+      </button>
+      <button
+        type="submit"
+        className="flex-1 px-4 py-2.5 rounded-full bg-pink-600 text-white text-xs uppercase tracking-[0.2em] hover:bg-pink-700"
+      >
+        Сохранить
+      </button>
+    </div>
   )
 }

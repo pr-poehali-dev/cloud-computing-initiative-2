@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { useRequests } from "@/contexts/RequestsContext"
+import { useDirectory } from "@/contexts/DirectoryContext"
 import SectionHeading from "@/components/about/SectionHeading"
 
 interface ResidencyPlan {
@@ -92,68 +93,10 @@ const RESIDENCY_PLANS: ResidencyPlan[] = [
   },
 ]
 
-interface Resident {
-  name: string
-  role: string
-  since: string
-  quote: string
-  photo: string
-}
-
-const RESIDENTS: Resident[] = [
-  {
-    name: "Анастасия К.",
-    role: "Основательница студии",
-    since: "С нами 2 года",
-    quote: "Здесь я нашла подруг, партнёров и саму себя.",
-    photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/5c4bf05c-35f8-4749-b418-c0e1cca8c492.jpg",
-  },
-  {
-    name: "Вероника М.",
-    role: "Маркетолог, наставница",
-    since: "С нами 1 год",
-    quote: "Клуб «можно» — про право быть собой без оправданий.",
-    photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/199c539f-65ae-45ff-9dce-788c75bc8605.jpg",
-  },
-  {
-    name: "Ольга С.",
-    role: "Психолог, коуч",
-    since: "С нами 3 года",
-    quote: "Каждая встреча — глоток воздуха в плотном графике.",
-    photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/7eaa2546-85bc-4980-81be-59714b94eb87.jpg",
-  },
-  {
-    name: "Дарья Л.",
-    role: "Креативный продюсер",
-    since: "С нами 1.5 года",
-    quote: "Тёплый круг, в котором вырастают идеи и смелость.",
-    photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/ccceea76-3131-4851-bbed-0df24fd39011.jpg",
-  },
-  {
-    name: "Мария Р.",
-    role: "Основательница бренда",
-    since: "С нами 2 года",
-    quote: "Здесь поддерживают так, как умеют только женщины.",
-    photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/bf4dcd2b-9578-4647-bad3-7521b953678f.jpg",
-  },
-  {
-    name: "Елизавета Н.",
-    role: "Юрист, мама",
-    since: "С нами 8 месяцев",
-    quote: "Наконец нашла место, где можно просто быть.",
-    photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/2539cd88-42a8-4b5f-a8e8-eaece27e4dc7.jpg",
-  },
-]
-
 export default function AboutResidency() {
   const { isAuthenticated, user, updateProfile } = useAuth()
   const { addResidencyRequest } = useRequests()
+  const { residents: RESIDENTS } = useDirectory()
 
   const handleBuyPlan = (plan: ResidencyPlan) => {
     if (!isAuthenticated || !user) {
@@ -296,7 +239,7 @@ export default function AboutResidency() {
           <CarouselContent className="-ml-4">
             {RESIDENTS.map((r) => (
               <CarouselItem
-                key={r.name}
+                key={r.id}
                 className="pl-4 basis-[78%] sm:basis-1/2 lg:basis-1/3 xl:basis-1/4"
               >
                 <div className="group h-full rounded-3xl overflow-hidden bg-white border border-black/5 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-500">
