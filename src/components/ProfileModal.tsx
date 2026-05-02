@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ interface StoredRegistration {
 
 export default function ProfileModal({ open, onOpenChange }: Props) {
   const { user, logout, updateProfile } = useAuth()
+  const navigate = useNavigate()
   const [topUpOpen, setTopUpOpen] = useState(false)
 
   // Sync stats from storage when modal opens (in case someone registered via my link or sent gift)
@@ -177,6 +179,17 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
               <TeamFeature icon="Bell" label="Рассылки" />
               <TeamFeature icon="Lock" label="Закрытый чат команды" />
             </div>
+            <button
+              onClick={() => {
+                onOpenChange(false)
+                navigate("/team")
+              }}
+              className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 via-pink-500 to-fuchsia-600 hover:opacity-95 text-white px-5 py-3 text-xs uppercase tracking-[0.22em] font-medium transition-opacity"
+            >
+              <Icon name="LayoutDashboard" size={14} />
+              Открыть панель управления
+              <Icon name="ArrowRight" size={14} />
+            </button>
           </div>
         )}
 

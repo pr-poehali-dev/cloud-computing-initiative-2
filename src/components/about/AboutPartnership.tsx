@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import SectionHeading from "@/components/about/SectionHeading"
+import { useRequests } from "@/contexts/RequestsContext"
 
 interface Partner {
   name: string
@@ -160,6 +161,7 @@ export default function AboutPartnership() {
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
+  const { addPartnerRequest } = useRequests()
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((p) => ({ ...p, [key]: value }))
@@ -172,9 +174,7 @@ export default function AboutPartnership() {
     }
     setSubmitting(true)
     try {
-      const list = JSON.parse(localStorage.getItem("partnership_requests") || "[]")
-      list.push({ ...form, createdAt: new Date().toISOString() })
-      localStorage.setItem("partnership_requests", JSON.stringify(list))
+      addPartnerRequest({ ...form })
       await new Promise((r) => setTimeout(r, 600))
       toast.success("Заявка отправлена! Администратор свяжется в течение 1–2 дней.")
       setForm(EMPTY_FORM)

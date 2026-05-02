@@ -17,6 +17,11 @@ import AboutJoinPage from "./pages/AboutJoinPage";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SocialProvider } from "@/contexts/SocialContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
+import { RequestsProvider } from "@/contexts/RequestsContext";
+import { NewsProvider } from "@/contexts/NewsContext";
+import { TestimonialsProvider } from "@/contexts/TestimonialsContext";
+import { TeamChatProvider } from "@/contexts/TeamChatContext";
+import Team from "./pages/Team";
 
 const queryClient = new QueryClient();
 
@@ -25,25 +30,34 @@ const App = () => (
     <AuthProvider>
       <SocialProvider>
         <NotificationsProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/about/speakers" element={<AboutSpeakersPage />} />
-              <Route path="/about/events" element={<AboutEventsPage />} />
-              <Route path="/about/residency" element={<AboutResidencyPage />} />
-              <Route path="/about/partnership" element={<AboutPartnershipPage />} />
-              <Route path="/about/gallery" element={<AboutGalleryPage />} />
-              <Route path="/about/testimonials" element={<AboutTestimonialsPage />} />
-              <Route path="/about/join" element={<AboutJoinPage />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+          <RequestsProvider>
+            <NewsProvider>
+              <TestimonialsProvider>
+                <TeamChatProvider>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <BrowserRouter>
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/about/speakers" element={<AboutSpeakersPage />} />
+                        <Route path="/about/events" element={<AboutEventsPage />} />
+                        <Route path="/about/residency" element={<AboutResidencyPage />} />
+                        <Route path="/about/partnership" element={<AboutPartnershipPage />} />
+                        <Route path="/about/gallery" element={<AboutGalleryPage />} />
+                        <Route path="/about/testimonials" element={<AboutTestimonialsPage />} />
+                        <Route path="/about/join" element={<AboutJoinPage />} />
+                        <Route path="/team" element={<Team />} />
+                        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </BrowserRouter>
+                  </TooltipProvider>
+                </TeamChatProvider>
+              </TestimonialsProvider>
+            </NewsProvider>
+          </RequestsProvider>
         </NotificationsProvider>
       </SocialProvider>
     </AuthProvider>

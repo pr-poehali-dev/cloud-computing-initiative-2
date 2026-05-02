@@ -19,6 +19,7 @@ export interface User {
   balance: number
   role?: UserRole
   teamPosition?: string
+  notes?: string
 }
 
 export const REFERRAL_BONUS = 100
@@ -62,6 +63,8 @@ interface AuthContextType {
     amount: number,
     senderName?: string
   ) => { ok: boolean; recipientName?: string; error?: string }
+  getAllUsers: () => User[]
+  updateUserByEmail: (email: string, patch: Partial<User>) => boolean
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -258,6 +261,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const getAllUsers: AuthContextType["getAllUsers"] = () => {
+    const users = readUsers()
+    return users.map((u) => {
+      const ensured = ensureUserDefaults(u)
+      const { password: _pw, ...safe } = ensured
+      void _pw
+      return safe
+    })
+  }
+
+  const updateUserByEmail: AuthContextType["updateUserByEmail"] = (email, patch) => {
+    const users = readUsers()
+    const idx = users.findIndex((u) => u.email.toLowerCase() === email.toLowerCase())
+    if (idx < 0) return false
+    users[idx] = { ...users[idx], ...patch }
+    writeUsers(users)
+    if (user && user.email.toLowerCase() === email.toLowerCase()) {
+      const updated = { ...user, ...patch }
+      setUser(updated)
+      localStorage.setItem(STORAGE_SESSION, JSON.stringify(updated))
+    }
+    return true
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -270,6 +297,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         findInviterName,
         topUpBalance,
         topUpBalanceForCode,
+        getAllUsers,
+        updateUserByEmail,
       }}
     >
       {children}

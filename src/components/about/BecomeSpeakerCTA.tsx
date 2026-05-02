@@ -4,6 +4,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import { useRequests } from "@/contexts/RequestsContext"
 
 const SPEAKER_PERKS = [
   {
@@ -76,6 +77,7 @@ export default function BecomeSpeakerCTA() {
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
+  const { addSpeakerRequest } = useRequests()
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((p) => ({ ...p, [key]: value }))
@@ -88,9 +90,7 @@ export default function BecomeSpeakerCTA() {
     }
     setSubmitting(true)
     try {
-      const list = JSON.parse(localStorage.getItem("speaker_requests") || "[]")
-      list.push({ ...form, createdAt: new Date().toISOString() })
-      localStorage.setItem("speaker_requests", JSON.stringify(list))
+      addSpeakerRequest({ ...form })
       await new Promise((r) => setTimeout(r, 600))
       toast.success("Заявка отправлена! Администратор клуба свяжется с тобой.")
       setForm(EMPTY_FORM)

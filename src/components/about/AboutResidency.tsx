@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/carousel"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
+import { useRequests } from "@/contexts/RequestsContext"
 import SectionHeading from "@/components/about/SectionHeading"
 
 interface ResidencyPlan {
@@ -152,6 +153,7 @@ const RESIDENTS: Resident[] = [
 
 export default function AboutResidency() {
   const { isAuthenticated, user, updateProfile } = useAuth()
+  const { addResidencyRequest } = useRequests()
 
   const handleBuyPlan = (plan: ResidencyPlan) => {
     if (!isAuthenticated || !user) {
@@ -163,6 +165,14 @@ export default function AboutResidency() {
       return
     }
     updateProfile({ balance: (user.balance || 0) - plan.price })
+    addResidencyRequest({
+      email: user.email,
+      userName: `${user.firstName} ${user.lastName}`.trim(),
+      planTitle: plan.title,
+      amount: plan.price,
+      createdAt: new Date().toISOString(),
+      status: "approved",
+    })
     toast.success(`Резидентство «${plan.duration}» оформлено!`, {
       description: "Куратор свяжется с тобой в течение дня.",
     })
