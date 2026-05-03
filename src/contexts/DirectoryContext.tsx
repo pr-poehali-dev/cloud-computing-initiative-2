@@ -308,17 +308,18 @@ interface DirectoryContextType {
 const DirectoryContext = createContext<DirectoryContextType | null>(null)
 
 export function DirectoryProvider({ children }: { children: ReactNode }) {
-  const [speakers, setSpeakers] = useState<Speaker[]>([])
-  const [residents, setResidents] = useState<Resident[]>([])
-  const [partners, setPartners] = useState<Partner[]>([])
-  const [team, setTeam] = useState<TeamMember[]>([])
-
-  useEffect(() => {
-    setSpeakers(safeRead<Speaker[] | null>(KEY_SPEAKERS, null) || DEFAULT_SPEAKERS)
-    setResidents(safeRead<Resident[] | null>(KEY_RESIDENTS, null) || DEFAULT_RESIDENTS)
-    setPartners(safeRead<Partner[] | null>(KEY_PARTNERS, null) || DEFAULT_PARTNERS)
-    setTeam(safeRead<TeamMember[] | null>(KEY_TEAM, null) || DEFAULT_TEAM)
-  }, [])
+  const [speakers, setSpeakers] = useState<Speaker[]>(
+    () => safeRead<Speaker[] | null>(KEY_SPEAKERS, null) || DEFAULT_SPEAKERS
+  )
+  const [residents, setResidents] = useState<Resident[]>(
+    () => safeRead<Resident[] | null>(KEY_RESIDENTS, null) || DEFAULT_RESIDENTS
+  )
+  const [partners, setPartners] = useState<Partner[]>(
+    () => safeRead<Partner[] | null>(KEY_PARTNERS, null) || DEFAULT_PARTNERS
+  )
+  const [team, setTeam] = useState<TeamMember[]>(
+    () => safeRead<TeamMember[] | null>(KEY_TEAM, null) || DEFAULT_TEAM
+  )
 
   useEffect(() => {
     const handler = (e: StorageEvent) => {
