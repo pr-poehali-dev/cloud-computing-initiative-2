@@ -28,9 +28,11 @@ import {
   useDirectory,
   PARTNER_ACCENTS,
   PARTNER_ICONS,
+  TEAM_ACCENTS,
   type Speaker,
   type Resident,
   type Partner,
+  type TeamMember,
 } from "@/contexts/DirectoryContext"
 import { EVENTS, type ClubEvent } from "@/data/events"
 
@@ -2232,20 +2234,23 @@ function SectionMenu({
 
 /* ───────── Directory tab (Speakers / Residents / Partners) ───────── */
 
-type DirSub = "speakers" | "residents" | "partners"
+type DirSub = "team" | "speakers" | "residents" | "partners"
 
 function DirectoryTab() {
-  const [sub, setSub] = useState<DirSub>("speakers")
+  const [sub, setSub] = useState<DirSub>("team")
   const {
     speakers,
     residents,
     partners,
+    team,
     resetSpeakers,
     resetResidents,
     resetPartners,
+    resetTeam,
   } = useDirectory()
 
   const counts = {
+    team: team.length,
     speakers: speakers.length,
     residents: residents.length,
     partners: partners.length,
@@ -2256,6 +2261,7 @@ function DirectoryTab() {
       <div className="bg-white rounded-2xl border border-black/5 p-2 flex gap-1 overflow-x-auto">
         {(
           [
+            { id: "team", label: "Команда клуба", icon: "Users" },
             { id: "speakers", label: "Спикеры", icon: "Mic" },
             { id: "residents", label: "Резиденты", icon: "Heart" },
             { id: "partners", label: "Партнёры", icon: "Handshake" },
@@ -2281,6 +2287,7 @@ function DirectoryTab() {
         ))}
       </div>
 
+      {sub === "team" && <TeamManager onReset={resetTeam} />}
       {sub === "speakers" && <SpeakersManager onReset={resetSpeakers} />}
       {sub === "residents" && <ResidentsManager onReset={resetResidents} />}
       {sub === "partners" && <PartnersManager onReset={resetPartners} />}
@@ -2928,5 +2935,255 @@ function FormButtons({ onCancel }: { onCancel: () => void }) {
         Сохранить
       </button>
     </div>
+  )
+}
+
+function TeamManager({ onReset }: { onReset: () => void }) {
+  const {
+    team,
+    addTeamMember,
+    updateTeamMember,
+    deleteTeamMember,
+    reorderTeam,
+  } = useDirectory()
+  const [editing, setEditing] = useState<TeamMember | null>(null)
+  const [creating, setCreating] = useState(false)
+
+  const handleDelete = (m: TeamMember) => {
+    if (!window.confirm(`Удалить «${m.firstName} ${m.lastName}» из команды?`)) return
+    deleteTeamMember(m.id)
+    toast.success("Удалено")
+  }
+
+  return (
+    <div className="space-y-3">
+      <ManagerToolbar
+        title="Команда клуба"
+        subtitle="Карточки команды на главной странице «О клубе» — порядок отображается слева направо"
+        onAdd={() => setCreating(true)}
+        onReset={onReset}
+      />
+
+      {team.length === 0 ? (
+        <Empty text="Команда пока пустая" />
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {team.map((m, idx) => (
+            <div
+              key={m.id}
+              className="bg-white rounded-2xl border border-black/5 p-4 flex gap-3"
+            >
+              <div className="relative w-16 h-20 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
+                {m.photo ? (
+                  <img
+                    src={m.photo}
+                    alt={m.firstName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-black/30">
+                    <Icon name="Image" size={20} />
+                  </div>
+                )}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-t ${m.accent} mix-blend-multiply opacity-15`}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">
+                  {m.firstName} {m.lastName}
+                </div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-pink-600 mt-0.5 truncate">
+                  {m.role}
+                </div>
+                <div className="text-[10px] text-black/40 mt-1">
+                  Позиция #{idx + 1}
+                </div>
+                <div className="mt-2 flex gap-1 flex-wrap">
+                  <button
+                    onClick={() => reorderTeam(m.id, "up")}
+                    disabled={idx === 0}
+                    className="p-1.5 rounded-full hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Выше"
+                  >
+                    <Icon name="ArrowUp" size={13} />
+                  </button>
+                  <button
+                    onClick={() => reorderTeam(m.id, "down")}
+                    disabled={idx === team.length - 1}
+                    className="p-1.5 rounded-full hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Ниже"
+                  >
+                    <Icon name="ArrowDown" size={13} />
+                  </button>
+                  <button
+                    onClick={() => setEditing(m)}
+                    className="p-1.5 rounded-full hover:bg-black/5"
+                    title="Редактировать"
+                  >
+                    <Icon name="Pencil" size={13} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(m)}
+                    className="p-1.5 rounded-full hover:bg-red-50 text-red-500"
+                    title="Удалить"
+                  >
+                    <Icon name="Trash2" size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(creating || editing) && (
+        <TeamMemberForm
+          initial={editing}
+          onCancel={() => {
+            setCreating(false)
+            setEditing(null)
+          }}
+          onSave={(data) => {
+            if (editing) {
+              updateTeamMember(editing.id, data)
+              toast.success("Карточка обновлена")
+            } else {
+              addTeamMember(data)
+              toast.success("Добавлено в команду")
+            }
+            setCreating(false)
+            setEditing(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function TeamMemberForm({
+  initial,
+  onCancel,
+  onSave,
+}: {
+  initial: TeamMember | null
+  onCancel: () => void
+  onSave: (data: Omit<TeamMember, "id">) => void
+}) {
+  const [firstName, setFirstName] = useState(initial?.firstName || "")
+  const [lastName, setLastName] = useState(initial?.lastName || "")
+  const [role, setRole] = useState(initial?.role || "")
+  const [photo, setPhoto] = useState(initial?.photo || "")
+  const [accent, setAccent] = useState(initial?.accent || TEAM_ACCENTS[0])
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const onFile = (f?: File) => {
+    if (!f) return
+    const reader = new FileReader()
+    reader.onload = () => setPhoto(reader.result as string)
+    reader.readAsDataURL(f)
+  }
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!firstName.trim() || !role.trim()) {
+      toast.error("Заполни имя и должность")
+      return
+    }
+    onSave({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      role: role.trim(),
+      photo,
+      accent,
+    })
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent className="sm:max-w-[520px] max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {initial ? "Редактировать члена команды" : "Новый член команды"}
+          </DialogTitle>
+          <DialogDescription>
+            Карточка отображается в блоке «Команда клуба» на странице «О клубе»
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="space-y-3">
+          <div className="rounded-2xl overflow-hidden bg-stone-100 relative aspect-[3/4] max-w-[200px]">
+            {photo ? (
+              <img src={photo} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-black/30">
+                <Icon name="ImagePlus" size={32} />
+              </div>
+            )}
+            <div
+              className={`absolute inset-0 bg-gradient-to-t ${accent} mix-blend-multiply opacity-15 pointer-events-none`}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute bottom-3 left-3 right-3 text-white pointer-events-none">
+              <div className="text-[9px] uppercase tracking-[0.2em] opacity-90 mb-0.5">
+                {role || "Должность"}
+              </div>
+              <div
+                className="text-base leading-tight"
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontWeight: 500,
+                }}
+              >
+                {firstName || "Имя"} {lastName}
+              </div>
+            </div>
+          </div>
+
+          <PhotoField photo={photo} onChange={setPhoto} fileRef={fileRef} onFile={onFile} />
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Имя*</Label>
+              <Input
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Фамилия</Label>
+              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label>Должность*</Label>
+            <Input
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              placeholder="Основательница, менеджер, контент-мейкер..."
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Цветовой акцент</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {TEAM_ACCENTS.map((cl) => (
+                <button
+                  key={cl}
+                  type="button"
+                  onClick={() => setAccent(cl)}
+                  className={`h-10 rounded-xl bg-gradient-to-br ${cl} ring-2 ring-offset-2 transition-all ${
+                    accent === cl ? "ring-pink-600" : "ring-transparent"
+                  }`}
+                  title={cl}
+                />
+              ))}
+            </div>
+          </div>
+          <FormButtons onCancel={onCancel} />
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

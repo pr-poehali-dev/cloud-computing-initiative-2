@@ -1,42 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import Icon from "@/components/ui/icon"
-
-interface Member {
-  photo: string
-  firstName: string
-  lastName: string
-  role: string
-  accent: string
-}
-
-const TEAM: Member[] = [
-  {
-    photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/6b4fd03e-9b33-4641-88db-89b6c7ee19aa.jpg",
-    firstName: "Юлия",
-    lastName: "Мустафина",
-    role: "Основательница клуба",
-    accent: "from-pink-400 to-rose-500",
-  },
-  {
-    photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/420bdc95-1e68-4ae1-b41c-1f06a1b19f62.jpg",
-    firstName: "Алина",
-    lastName: "Соколова",
-    role: "Менеджер клуба",
-    accent: "from-rose-400 to-fuchsia-500",
-  },
-  {
-    photo:
-      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/9e2b86d4-a088-4d67-8dcd-56fe34d392fc.jpg",
-    firstName: "Дарья",
-    lastName: "Иванова",
-    role: "Контент-мейкер",
-    accent: "from-fuchsia-400 to-pink-500",
-  },
-]
+import { useDirectory } from "@/contexts/DirectoryContext"
 
 export default function AboutTeam() {
+  const { team: TEAM } = useDirectory()
   const trackRef = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
 
@@ -103,7 +70,7 @@ export default function AboutTeam() {
         >
           {TEAM.map((m) => (
             <article
-              key={m.firstName + m.lastName}
+              key={m.id}
               className="snap-center flex-shrink-0 w-[280px] sm:w-[320px] md:w-[360px] rounded-3xl overflow-hidden bg-white border border-black/5 shadow-sm hover:shadow-xl transition-shadow"
             >
               <div className="relative aspect-[3/4] overflow-hidden">

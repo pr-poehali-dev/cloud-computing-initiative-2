@@ -34,9 +34,19 @@ export interface Partner {
   accent: string
 }
 
+export interface TeamMember {
+  id: string
+  firstName: string
+  lastName: string
+  role: string
+  photo: string
+  accent: string
+}
+
 const KEY_SPEAKERS = "mojno_directory_speakers"
 const KEY_RESIDENTS = "mojno_directory_residents"
 const KEY_PARTNERS = "mojno_directory_partners"
+const KEY_TEAM = "mojno_directory_team"
 
 const DEFAULT_SPEAKERS: Speaker[] = [
   {
@@ -173,6 +183,47 @@ const DEFAULT_PARTNERS: Partner[] = [
   },
 ]
 
+const DEFAULT_TEAM: TeamMember[] = [
+  {
+    id: "team-1",
+    firstName: "Юлия",
+    lastName: "Мустафина",
+    role: "Основательница клуба",
+    photo:
+      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/bucket/6b4fd03e-9b33-4641-88db-89b6c7ee19aa.jpg",
+    accent: "from-pink-400 to-rose-500",
+  },
+  {
+    id: "team-2",
+    firstName: "Алина",
+    lastName: "Соколова",
+    role: "Менеджер клуба",
+    photo:
+      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/420bdc95-1e68-4ae1-b41c-1f06a1b19f62.jpg",
+    accent: "from-rose-400 to-fuchsia-500",
+  },
+  {
+    id: "team-3",
+    firstName: "Дарья",
+    lastName: "Иванова",
+    role: "Контент-мейкер",
+    photo:
+      "https://cdn.poehali.dev/projects/1814992c-f1be-4bc1-a550-62811824f8aa/files/9e2b86d4-a088-4d67-8dcd-56fe34d392fc.jpg",
+    accent: "from-fuchsia-400 to-pink-500",
+  },
+]
+
+export const TEAM_ACCENTS = [
+  "from-pink-400 to-rose-500",
+  "from-rose-400 to-fuchsia-500",
+  "from-fuchsia-400 to-pink-500",
+  "from-amber-400 to-rose-500",
+  "from-purple-500 to-fuchsia-600",
+  "from-emerald-400 to-teal-500",
+  "from-sky-400 to-indigo-500",
+  "from-orange-400 to-pink-500",
+]
+
 export const PARTNER_ACCENTS = [
   "from-rose-300 to-pink-400",
   "from-fuchsia-400 to-purple-500",
@@ -234,6 +285,7 @@ interface DirectoryContextType {
   speakers: Speaker[]
   residents: Resident[]
   partners: Partner[]
+  team: TeamMember[]
   addSpeaker: (data: Omit<Speaker, "id">) => Speaker
   updateSpeaker: (id: string, patch: Partial<Speaker>) => void
   deleteSpeaker: (id: string) => void
@@ -246,6 +298,11 @@ interface DirectoryContextType {
   updatePartner: (id: string, patch: Partial<Partner>) => void
   deletePartner: (id: string) => void
   resetPartners: () => void
+  addTeamMember: (data: Omit<TeamMember, "id">) => TeamMember
+  updateTeamMember: (id: string, patch: Partial<TeamMember>) => void
+  deleteTeamMember: (id: string) => void
+  reorderTeam: (id: string, direction: "up" | "down") => void
+  resetTeam: () => void
 }
 
 const DirectoryContext = createContext<DirectoryContextType | null>(null)
@@ -254,11 +311,13 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
   const [speakers, setSpeakers] = useState<Speaker[]>([])
   const [residents, setResidents] = useState<Resident[]>([])
   const [partners, setPartners] = useState<Partner[]>([])
+  const [team, setTeam] = useState<TeamMember[]>([])
 
   useEffect(() => {
     setSpeakers(safeRead<Speaker[] | null>(KEY_SPEAKERS, null) || DEFAULT_SPEAKERS)
     setResidents(safeRead<Resident[] | null>(KEY_RESIDENTS, null) || DEFAULT_RESIDENTS)
     setPartners(safeRead<Partner[] | null>(KEY_PARTNERS, null) || DEFAULT_PARTNERS)
+    setTeam(safeRead<TeamMember[] | null>(KEY_TEAM, null) || DEFAULT_TEAM)
   }, [])
 
   useEffect(() => {
@@ -269,6 +328,8 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
         setResidents(safeRead<Resident[] | null>(KEY_RESIDENTS, null) || DEFAULT_RESIDENTS)
       if (e.key === KEY_PARTNERS)
         setPartners(safeRead<Partner[] | null>(KEY_PARTNERS, null) || DEFAULT_PARTNERS)
+      if (e.key === KEY_TEAM)
+        setTeam(safeRead<TeamMember[] | null>(KEY_TEAM, null) || DEFAULT_TEAM)
     }
     window.addEventListener("storage", handler)
     return () => window.removeEventListener("storage", handler)
@@ -285,6 +346,10 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
   const persistPartners = useCallback((next: Partner[]) => {
     safeWrite(KEY_PARTNERS, next)
     setPartners(next)
+  }, [])
+  const persistTeam = useCallback((next: TeamMember[]) => {
+    safeWrite(KEY_TEAM, next)
+    setTeam(next)
   }, [])
 
   const value = useMemo<DirectoryContextType>(
@@ -330,8 +395,40 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
         persistPartners(partners.filter((p) => p.id !== id))
       },
       resetPartners: () => persistPartners(DEFAULT_PARTNERS),
+
+      team,
+      addTeamMember: (data) => {
+        const item: TeamMember = { ...data, id: genId("team") }
+        persistTeam([...team, item])
+        return item
+      },
+      updateTeamMember: (id, patch) => {
+        persistTeam(team.map((m) => (m.id === id ? { ...m, ...patch } : m)))
+      },
+      deleteTeamMember: (id) => {
+        persistTeam(team.filter((m) => m.id !== id))
+      },
+      reorderTeam: (id, direction) => {
+        const idx = team.findIndex((m) => m.id === id)
+        if (idx < 0) return
+        const target = direction === "up" ? idx - 1 : idx + 1
+        if (target < 0 || target >= team.length) return
+        const next = [...team]
+        ;[next[idx], next[target]] = [next[target], next[idx]]
+        persistTeam(next)
+      },
+      resetTeam: () => persistTeam(DEFAULT_TEAM),
     }),
-    [speakers, residents, partners, persistSpeakers, persistResidents, persistPartners]
+    [
+      speakers,
+      residents,
+      partners,
+      team,
+      persistSpeakers,
+      persistResidents,
+      persistPartners,
+      persistTeam,
+    ]
   )
 
   return <DirectoryContext.Provider value={value}>{children}</DirectoryContext.Provider>
