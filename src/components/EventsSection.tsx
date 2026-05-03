@@ -60,7 +60,9 @@ export default function EventsSection() {
     <section id="events" className="relative z-20 px-6 py-24 bg-black/60 backdrop-blur-sm">
       <div className="max-w-6xl mx-auto">
         <div className="mb-12">
-          <p className="text-pink-400 uppercase tracking-widest text-xs mb-3">Мероприятия клуба</p>
+          <span className="inline-block bg-pink-500 text-white uppercase tracking-widest text-xs font-medium px-4 py-1.5 rounded-full mb-3 shadow-md shadow-pink-500/30">
+            МОЖНО EVENTS
+          </span>
           <h2 className="text-4xl md:text-5xl font-light text-white tracking-tight">
             Можно <span className="italic font-medium text-pink-300">всё это</span>
           </h2>
