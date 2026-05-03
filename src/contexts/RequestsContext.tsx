@@ -49,9 +49,25 @@ export interface ResidencyRequest {
   teamComment?: string
 }
 
+export interface EventOrderRequest {
+  id: string
+  contactName: string
+  phone: string
+  email: string
+  format: string
+  date: string
+  guests: string
+  budget: string
+  message: string
+  createdAt: string
+  status: RequestStatus
+  teamComment?: string
+}
+
 const KEY_SPEAKERS = "mojno_speaker_requests_v2"
 const KEY_PARTNERS = "mojno_partner_requests_v2"
 const KEY_RESIDENCY = "mojno_residency_requests"
+const KEY_EVENT_ORDERS = "mojno_event_orders"
 
 const LEGACY_SPEAKERS = "speaker_requests"
 const LEGACY_PARTNERS = "partnership_requests"
@@ -148,17 +164,21 @@ interface RequestsContextType {
   speakerRequests: SpeakerRequest[]
   partnerRequests: PartnerRequest[]
   residencyRequests: ResidencyRequest[]
+  eventOrders: EventOrderRequest[]
   addSpeakerRequest: (data: Omit<SpeakerRequest, "id" | "createdAt" | "status">) => void
   addPartnerRequest: (data: Omit<PartnerRequest, "id" | "createdAt" | "status">) => void
   addResidencyRequest: (
     data: Omit<ResidencyRequest, "id"> & { id?: string }
   ) => void
+  addEventOrder: (data: Omit<EventOrderRequest, "id" | "createdAt" | "status">) => void
   updateSpeakerRequest: (id: string, patch: Partial<SpeakerRequest>) => void
   updatePartnerRequest: (id: string, patch: Partial<PartnerRequest>) => void
   updateResidencyRequest: (id: string, patch: Partial<ResidencyRequest>) => void
+  updateEventOrder: (id: string, patch: Partial<EventOrderRequest>) => void
   deleteSpeakerRequest: (id: string) => void
   deletePartnerRequest: (id: string) => void
   deleteResidencyRequest: (id: string) => void
+  deleteEventOrder: (id: string) => void
 }
 
 const RequestsContext = createContext<RequestsContextType | null>(null)
@@ -167,11 +187,13 @@ export function RequestsProvider({ children }: { children: ReactNode }) {
   const [speakerRequests, setSpeakerRequests] = useState<SpeakerRequest[]>([])
   const [partnerRequests, setPartnerRequests] = useState<PartnerRequest[]>([])
   const [residencyRequests, setResidencyRequests] = useState<ResidencyRequest[]>([])
+  const [eventOrders, setEventOrders] = useState<EventOrderRequest[]>([])
 
   useEffect(() => {
     setSpeakerRequests(migrateSpeakers())
     setPartnerRequests(migratePartners())
     setResidencyRequests(safeRead<ResidencyRequest>(KEY_RESIDENCY))
+    setEventOrders(safeRead<EventOrderRequest>(KEY_EVENT_ORDERS))
   }, [])
 
   const persistSpeakers = useCallback((next: SpeakerRequest[]) => {
@@ -187,6 +209,11 @@ export function RequestsProvider({ children }: { children: ReactNode }) {
   const persistResidency = useCallback((next: ResidencyRequest[]) => {
     localStorage.setItem(KEY_RESIDENCY, JSON.stringify(next))
     setResidencyRequests(next)
+  }, [])
+
+  const persistEventOrders = useCallback((next: EventOrderRequest[]) => {
+    localStorage.setItem(KEY_EVENT_ORDERS, JSON.stringify(next))
+    setEventOrders(next)
   }, [])
 
   const addSpeakerRequest: RequestsContextType["addSpeakerRequest"] = (data) => {
@@ -223,6 +250,18 @@ export function RequestsProvider({ children }: { children: ReactNode }) {
     persistResidency(next)
   }
 
+  const addEventOrder: RequestsContextType["addEventOrder"] = (data) => {
+    const item: EventOrderRequest = {
+      ...data,
+      id: genId(),
+      createdAt: new Date().toISOString(),
+      status: "new",
+    }
+    const current = safeRead<EventOrderRequest>(KEY_EVENT_ORDERS)
+    const next = [item, ...current]
+    persistEventOrders(next)
+  }
+
   const updateSpeakerRequest: RequestsContextType["updateSpeakerRequest"] = (id, patch) => {
     persistSpeakers(speakerRequests.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
@@ -250,21 +289,33 @@ export function RequestsProvider({ children }: { children: ReactNode }) {
     persistResidency(residencyRequests.filter((r) => r.id !== id))
   }
 
+  const updateEventOrder: RequestsContextType["updateEventOrder"] = (id, patch) => {
+    persistEventOrders(eventOrders.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  }
+
+  const deleteEventOrder: RequestsContextType["deleteEventOrder"] = (id) => {
+    persistEventOrders(eventOrders.filter((r) => r.id !== id))
+  }
+
   return (
     <RequestsContext.Provider
       value={{
         speakerRequests,
         partnerRequests,
         residencyRequests,
+        eventOrders,
         addSpeakerRequest,
         addPartnerRequest,
         addResidencyRequest,
+        addEventOrder,
         updateSpeakerRequest,
         updatePartnerRequest,
         updateResidencyRequest,
+        updateEventOrder,
         deleteSpeakerRequest,
         deletePartnerRequest,
         deleteResidencyRequest,
+        deleteEventOrder,
       }}
     >
       {children}

@@ -37,6 +37,10 @@ export default function HeroContent() {
     setEventsOpen(true)
   }
 
+  const handleOrderEvent = () => {
+    navigate("/mojno-events")
+  }
+
   const handleAboutClick = (e: React.MouseEvent) => {
     if (!isAuthenticated) {
       e.preventDefault()
@@ -97,11 +101,11 @@ export default function HeroContent() {
         <div className="flex items-center gap-3 sm:gap-4 justify-center flex-nowrap overflow-x-auto px-6 mt-auto">
           <div className="pill-running-glow rounded-full flex-shrink-0">
             <button
-              onClick={handleEventsClick}
-              className="relative z-10 inline-flex items-center gap-2 px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-white/50 backdrop-blur-sm text-black font-normal text-xs sm:text-sm transition-all duration-200 hover:bg-white/70 cursor-pointer tracking-[0.25em] uppercase whitespace-nowrap"
+              onClick={handleOrderEvent}
+              className="relative z-10 inline-flex items-center gap-2 px-6 sm:px-10 py-4 sm:py-5 rounded-full bg-pink-600 hover:bg-pink-700 text-white font-medium text-xs sm:text-sm transition-all duration-200 cursor-pointer tracking-[0.25em] uppercase whitespace-nowrap shadow-lg shadow-pink-500/40"
             >
-              {!isAuthenticated && <Icon name="Lock" size={13} />}
-              Мероприятия
+              <Icon name="Sparkles" size={13} />
+              МОЖНО EVENTS
             </button>
           </div>
 

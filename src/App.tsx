@@ -14,6 +14,7 @@ import AboutPartnershipPage from "./pages/AboutPartnershipPage";
 import AboutGalleryPage from "./pages/AboutGalleryPage";
 import AboutTestimonialsPage from "./pages/AboutTestimonialsPage";
 import AboutJoinPage from "./pages/AboutJoinPage";
+import MojnoEvents from "./pages/MojnoEvents";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SocialProvider } from "@/contexts/SocialContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
@@ -54,6 +55,7 @@ const App = () => (
                         <Route path="/about/gallery" element={<AboutGalleryPage />} />
                         <Route path="/about/testimonials" element={<AboutTestimonialsPage />} />
                         <Route path="/about/join" element={<AboutJoinPage />} />
+                        <Route path="/mojno-events" element={<MojnoEvents />} />
                         <Route path="/team" element={<Team />} />
                         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                         <Route path="*" element={<NotFound />} />
