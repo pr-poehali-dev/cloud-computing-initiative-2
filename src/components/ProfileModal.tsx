@@ -12,6 +12,7 @@ import { useAuth, REFERRAL_BONUS } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import { CATEGORIES, type EventCategory } from "@/data/events"
 import TopUpModal from "@/components/TopUpModal"
+import MyEventsModal from "@/components/MyEventsModal"
 import TeamBadge from "@/components/TeamBadge"
 import RoleBadge from "@/components/RoleBadge"
 
@@ -32,6 +33,7 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
   const { user, logout, updateProfile } = useAuth()
   const navigate = useNavigate()
   const [topUpOpen, setTopUpOpen] = useState(false)
+  const [eventsOpen, setEventsOpen] = useState(false)
 
   // Sync stats from storage when modal opens (in case someone registered via my link or sent gift)
   useEffect(() => {
@@ -300,7 +302,13 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
 
         {/* Quick stats */}
         <div className="grid grid-cols-3 gap-3 pt-3">
-          <Stat icon="CalendarCheck" value={String(totalRegistrations)} label="Записей" />
+          <Stat
+            icon="CalendarCheck"
+            value={String(totalRegistrations)}
+            label="Мероприятия"
+            onClick={() => setEventsOpen(true)}
+            hint="Открыть список"
+          />
           <Stat icon="UserPlus" value={String(user.invitedCount || 0)} label="Подруг приглашено" />
           <Stat icon="Sparkles" value={String(user.points || 0)} label="Баллов" />
         </div>
@@ -445,6 +453,7 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
         </button>
       </DialogContent>
       <TopUpModal open={topUpOpen} onOpenChange={setTopUpOpen} />
+      <MyEventsModal open={eventsOpen} onOpenChange={setEventsOpen} />
     </Dialog>
   )
 }
@@ -473,13 +482,45 @@ function Section({ title, icon, text }: { title: string; icon: string; text: str
   )
 }
 
-function Stat({ icon, value, label }: { icon: string; value: string; label: string }) {
-  return (
-    <div className="rounded-xl border border-black/10 px-3 py-3 text-center">
+function Stat({
+  icon,
+  value,
+  label,
+  onClick,
+  hint,
+}: {
+  icon: string
+  value: string
+  label: string
+  onClick?: () => void
+  hint?: string
+}) {
+  const content = (
+    <>
       <Icon name={icon} size={18} className="mx-auto text-pink-500" />
       <div className="text-lg font-semibold mt-1">{value}</div>
       <div className="text-[10px] uppercase tracking-[0.18em] text-black/50">{label}</div>
-    </div>
+      {onClick && hint && (
+        <div className="text-[9px] text-pink-600 mt-1 inline-flex items-center gap-0.5">
+          {hint}
+          <Icon name="ChevronRight" size={10} />
+        </div>
+      )}
+    </>
+  )
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="rounded-xl border border-black/10 px-3 py-3 text-center hover:border-pink-300 hover:bg-pink-50/40 transition-colors group"
+      >
+        {content}
+      </button>
+    )
+  }
+  return (
+    <div className="rounded-xl border border-black/10 px-3 py-3 text-center">{content}</div>
   )
 }
 
