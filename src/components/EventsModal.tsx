@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Icon from "@/components/ui/icon"
 import { toast } from "sonner"
-import { EVENTS, CATEGORIES, today, ymd, type EventCategory as Category } from "@/data/events"
+import { EVENTS, CATEGORIES, today, ymd, type ClubEvent, type EventCategory as Category } from "@/data/events"
 import { useAuth } from "@/contexts/AuthContext"
 
 const REMINDER_OPTIONS = [
@@ -34,6 +34,7 @@ interface Props {
 type View = "list" | "register"
 
 const REGISTRATIONS_KEY = "mojno_event_registrations"
+const CUSTOM_EVENTS_KEY = "mojno_custom_events"
 
 interface StoredRegistration {
   email: string
@@ -41,13 +42,47 @@ interface StoredRegistration {
   category: Category
   date: string
   registeredAt: string
+  status: "paid" | "pending_admin" | "deposit"
+  role?: string
+  amount?: number
+}
+
+const readCustomEvents = (): ClubEvent[] => {
+  try {
+    const raw = localStorage.getItem(CUSTOM_EVENTS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const readRegistrations = (): StoredRegistration[] => {
+  try {
+    const raw = localStorage.getItem(REGISTRATIONS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
 }
 
 export default function EventsModal({ open, onOpenChange }: Props) {
-  const { user } = useAuth()
+  const { user, updateProfile } = useAuth()
   const [activeCategories, setActiveCategories] = useState<Set<Category>>(new Set())
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today)
   const [view, setView] = useState<View>("list")
+  const [customEvents, setCustomEvents] = useState<ClubEvent[]>([])
+  const [registrations, setRegistrations] = useState<StoredRegistration[]>([])
+
+  useEffect(() => {
+    if (open) {
+      setCustomEvents(readCustomEvents())
+      setRegistrations(readRegistrations())
+    }
+  }, [open])
 
   // Registration form state
   const [regName, setRegName] = useState("")
@@ -58,10 +93,12 @@ export default function EventsModal({ open, onOpenChange }: Props) {
   const [reminder, setReminder] = useState("1d")
   const [comment, setComment] = useState("")
 
+  const allEvents = useMemo(() => [...customEvents, ...EVENTS], [customEvents])
+
   const filtered = useMemo(() => {
-    if (activeCategories.size === 0) return EVENTS
-    return EVENTS.filter((e) => activeCategories.has(e.category))
-  }, [activeCategories])
+    if (activeCategories.size === 0) return allEvents
+    return allEvents.filter((e) => activeCategories.has(e.category))
+  }, [activeCategories, allEvents])
 
   const eventDates = useMemo(() => filtered.map((e) => new Date(e.date)), [filtered])
 
@@ -70,6 +107,24 @@ export default function EventsModal({ open, onOpenChange }: Props) {
     const key = ymd(selectedDate)
     return filtered.find((e) => e.date === key) ?? null
   }, [selectedDate, filtered])
+
+  // Count current registrations for the selected event
+  const registeredCount = useMemo(() => {
+    if (!dayEvent) return 0
+    return registrations.filter((r) => r.eventTitle === dayEvent.title).length
+  }, [dayEvent, registrations])
+
+  const isFull = useMemo(() => {
+    if (!dayEvent || !dayEvent.capacity || dayEvent.capacity <= 0) return false
+    return registeredCount >= dayEvent.capacity
+  }, [dayEvent, registeredCount])
+
+  const role = user?.role || "member"
+  const userBalance = user?.points || 0
+  const isBlogger = role === "blogger"
+  const isResident = role === "resident"
+  const isTeam = role === "team"
+  const insufficientBalance = isBlogger && dayEvent ? userBalance < dayEvent.price : false
 
   const toggleCategory = (c: Category) => {
     setActiveCategories((prev) => {
@@ -95,31 +150,66 @@ export default function EventsModal({ open, onOpenChange }: Props) {
   const handlePay = (e: React.FormEvent) => {
     e.preventDefault()
     if (!dayEvent) return
+    if (isFull) {
+      toast.error("Мест уже нет — свяжись с администратором.")
+      return
+    }
     const reminderLabel = REMINDER_OPTIONS.find((r) => r.value === reminder)?.label
     const channel = notifyMethod === "email" ? `на почту ${notifyEmail}` : `на телефон ${notifyPhone}`
 
-    // Persist registration to count category preferences in profile
+    // Determine status by role
+    let status: StoredRegistration["status"] = "paid"
+    let amount = dayEvent.price
+    if (isResident) {
+      status = "pending_admin"
+      amount = 0
+    } else if (isBlogger) {
+      status = "deposit"
+      if (userBalance < dayEvent.price) {
+        toast.error(
+          `Недостаточно баллов на депозите. Нужно ${dayEvent.price.toLocaleString("ru-RU")}, есть ${userBalance.toLocaleString("ru-RU")}.`
+        )
+        return
+      }
+      // списываем с депозита
+      updateProfile({ points: userBalance - dayEvent.price })
+      amount = dayEvent.price
+    }
+
+    // Persist registration
     if (user) {
       try {
-        const list: StoredRegistration[] = JSON.parse(
-          localStorage.getItem(REGISTRATIONS_KEY) || "[]"
-        )
+        const list: StoredRegistration[] = readRegistrations()
         list.push({
           email: user.email,
           eventTitle: dayEvent.title,
           category: dayEvent.category,
           date: dayEvent.date,
           registeredAt: new Date().toISOString(),
+          status,
+          role,
+          amount,
         })
         localStorage.setItem(REGISTRATIONS_KEY, JSON.stringify(list))
+        setRegistrations(list)
       } catch {
         /* ignore */
       }
     }
 
-    toast.success(`Переходим к оплате «${dayEvent.title}»`, {
-      description: `Напомним ${reminderLabel?.toLowerCase()} ${channel}.`,
-    })
+    if (status === "pending_admin") {
+      toast.success(`Заявка на «${dayEvent.title}» отправлена админу.`, {
+        description: "Администратор подтвердит запись и выставит доплату при необходимости.",
+      })
+    } else if (status === "deposit") {
+      toast.success(`Запись на «${dayEvent.title}» подтверждена!`, {
+        description: `С депозита списано ${dayEvent.price.toLocaleString("ru-RU")} баллов. Напомним ${reminderLabel?.toLowerCase()} ${channel}.`,
+      })
+    } else {
+      toast.success(`Переходим к оплате «${dayEvent.title}»`, {
+        description: `Напомним ${reminderLabel?.toLowerCase()} ${channel}.`,
+      })
+    }
     resetForm()
     setView("list")
   }
@@ -219,15 +309,48 @@ export default function EventsModal({ open, onOpenChange }: Props) {
                             <Icon name="Wallet" size={14} />
                             {dayEvent.price.toLocaleString("ru-RU")} ₽
                           </div>
+                          {dayEvent.capacity && dayEvent.capacity > 0 && (
+                            <div className="flex items-center gap-2">
+                              <Icon name="Users" size={14} />
+                              <span>
+                                {registeredCount}/{dayEvent.capacity}{" "}
+                                {isFull ? (
+                                  <span className="text-red-500 font-medium">— мест нет</span>
+                                ) : (
+                                  <span className="text-black/50">
+                                    — осталось {dayEvent.capacity - registeredCount}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <p className="text-sm text-black/75 leading-relaxed">{dayEvent.description}</p>
 
-                        <button onClick={() => setView("register")} className="mt-auto pt-5 text-left">
-                          <span className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 rounded-full bg-black text-white text-sm uppercase tracking-[0.2em] hover:bg-black/85 transition-colors">
-                            <Icon name="CalendarCheck" size={16} />
-                            Записаться
-                          </span>
-                        </button>
+                        {isFull ? (
+                          <a
+                            href="https://t.me/+QgiLIa1gFRY4Y2Iy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-auto pt-5 block"
+                          >
+                            <span className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 via-pink-500 to-fuchsia-600 text-white text-sm uppercase tracking-[0.2em] hover:opacity-95 transition-opacity">
+                              <Icon name="MessageCircle" size={16} />
+                              Связаться с администратором
+                            </span>
+                          </a>
+                        ) : (
+                          <button onClick={() => setView("register")} className="mt-auto pt-5 text-left">
+                            <span className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 rounded-full bg-black text-white text-sm uppercase tracking-[0.2em] hover:bg-black/85 transition-colors">
+                              <Icon name={isResident ? "ShieldCheck" : isBlogger ? "Wallet" : "CalendarCheck"} size={16} />
+                              {isResident
+                                ? "Записаться через администратора"
+                                : isBlogger
+                                ? "Записаться (с депозита)"
+                                : "Записаться"}
+                            </span>
+                          </button>
+                        )}
                       </>
                     ) : (
                       <div className="flex-1 flex flex-col items-center justify-center text-center text-black/50 py-8">
@@ -277,8 +400,17 @@ export default function EventsModal({ open, onOpenChange }: Props) {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-xs text-black/50 uppercase tracking-[0.2em]">К оплате</div>
-                <div className="text-2xl font-semibold">{dayEvent.price.toLocaleString("ru-RU")} ₽</div>
+                <div className="text-xs text-black/50 uppercase tracking-[0.2em]">
+                  {isResident ? "Уточняется" : isBlogger ? "С депозита" : "К оплате"}
+                </div>
+                <div className="text-2xl font-semibold">
+                  {isResident ? "—" : `${dayEvent.price.toLocaleString("ru-RU")} ${isBlogger ? "" : "₽"}`}
+                </div>
+                {dayEvent.capacity && dayEvent.capacity > 0 && (
+                  <div className="text-[11px] text-black/55 mt-1">
+                    Записано: {registeredCount}/{dayEvent.capacity}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -349,18 +481,61 @@ export default function EventsModal({ open, onOpenChange }: Props) {
                 <Textarea id="regComment" rows={2} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Особые пожелания, питание, доступная среда…" />
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-black/55 bg-black/[0.03] rounded-xl px-3 py-2">
-                <Icon name="ShieldCheck" size={14} />
-                Безопасная оплата · возврат при отмене за 24 часа
-              </div>
+              {/* Role-specific info */}
+              {isResident && (
+                <div className="flex items-start gap-2 text-xs text-fuchsia-700 bg-fuchsia-50 border border-fuchsia-200 rounded-xl px-3 py-2.5">
+                  <Icon name="Gem" size={14} className="mt-0.5 flex-shrink-0" />
+                  <div>
+                    Для резидентов запись подтверждает администратор. Часть мероприятий бесплатна,
+                    для других может быть доплата — мы свяжемся с тобой.
+                  </div>
+                </div>
+              )}
+              {isBlogger && (
+                <div className="flex items-start gap-2 text-xs text-pink-700 bg-pink-50 border border-pink-200 rounded-xl px-3 py-2.5">
+                  <Icon name="Camera" size={14} className="mt-0.5 flex-shrink-0" />
+                  <div>
+                    Оплата с депозита блогера. Доступно: <b>{userBalance.toLocaleString("ru-RU")}</b> ·
+                    Списание: <b>{dayEvent.price.toLocaleString("ru-RU")}</b>
+                    {insufficientBalance && (
+                      <div className="text-red-600 mt-1">Недостаточно баллов на депозите.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {!isResident && !isBlogger && !isTeam && (
+                <div className="flex items-center gap-2 text-xs text-black/55 bg-black/[0.03] rounded-xl px-3 py-2">
+                  <Icon name="ShieldCheck" size={14} />
+                  Безопасная оплата · возврат при отмене за 24 часа
+                </div>
+              )}
 
-              <button
-                type="submit"
-                className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-black text-white text-sm uppercase tracking-[0.2em] hover:bg-black/85 transition-colors"
-              >
-                <Icon name="CreditCard" size={16} />
-                Оплатить {dayEvent.price.toLocaleString("ru-RU")} ₽
-              </button>
+              {isResident ? (
+                <button
+                  type="submit"
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white text-sm uppercase tracking-[0.2em] hover:opacity-95 transition-opacity"
+                >
+                  <Icon name="ShieldCheck" size={16} />
+                  Записаться через администратора
+                </button>
+              ) : isBlogger ? (
+                <button
+                  type="submit"
+                  disabled={insufficientBalance}
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-gradient-to-r from-amber-400 via-pink-500 to-fuchsia-500 text-white text-sm uppercase tracking-[0.2em] hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Icon name="Wallet" size={16} />
+                  Списать с депозита {dayEvent.price.toLocaleString("ru-RU")}
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-black text-white text-sm uppercase tracking-[0.2em] hover:bg-black/85 transition-colors"
+                >
+                  <Icon name="CreditCard" size={16} />
+                  Оплатить {dayEvent.price.toLocaleString("ru-RU")} ₽
+                </button>
+              )}
             </form>
           </>
         )}

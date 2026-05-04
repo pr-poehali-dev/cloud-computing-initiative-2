@@ -565,31 +565,67 @@ function MemberDetailDialog({
 
 /* ───────── Events ───────── */
 
+interface RegistrationRow {
+  email: string
+  eventTitle: string
+  category: string
+  date: string
+  registeredAt: string
+  status?: "paid" | "pending_admin" | "deposit"
+  role?: string
+  amount?: number
+}
+
 function EventsTab() {
   const [customEvents, setCustomEvents] = useState<CustomEvent[]>([])
   const [editing, setEditing] = useState<CustomEvent | null>(null)
   const [creating, setCreating] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [allRegs, setAllRegs] = useState<RegistrationRow[]>([])
 
-  useEffect(() => {
-    setCustomEvents(readCustomEvents())
-  }, [])
-
-  const registrationsByTitle = useMemo(() => {
+  const reloadRegs = () => {
     try {
       const raw = localStorage.getItem("mojno_event_registrations")
       const arr = raw ? JSON.parse(raw) : []
-      const map = new Map<string, number>()
-      if (Array.isArray(arr)) {
-        arr.forEach((r: { eventTitle?: string }) => {
-          if (r.eventTitle) map.set(r.eventTitle, (map.get(r.eventTitle) || 0) + 1)
-        })
-      }
-      return map
+      setAllRegs(Array.isArray(arr) ? arr : [])
     } catch {
-      return new Map<string, number>()
+      setAllRegs([])
     }
+  }
+
+  useEffect(() => {
+    setCustomEvents(readCustomEvents())
+    reloadRegs()
   }, [])
+
+  const registrationsByTitle = useMemo(() => {
+    const map = new Map<string, number>()
+    allRegs.forEach((r) => {
+      if (r.eventTitle) map.set(r.eventTitle, (map.get(r.eventTitle) || 0) + 1)
+    })
+    return map
+  }, [allRegs])
+
+  const pendingResident = useMemo(
+    () => allRegs.filter((r) => r.status === "pending_admin"),
+    [allRegs]
+  )
+
+  const updateRegStatus = (idx: number, newStatus: "paid" | "pending_admin") => {
+    const next = [...allRegs]
+    next[idx] = { ...next[idx], status: newStatus }
+    setAllRegs(next)
+    localStorage.setItem("mojno_event_registrations", JSON.stringify(next))
+    toast.success(newStatus === "paid" ? "Запись подтверждена" : "Возвращено в ожидание")
+  }
+
+  const removeReg = (idx: number) => {
+    if (!window.confirm("Удалить заявку?")) return
+    const next = allRegs.filter((_, i) => i !== idx)
+    setAllRegs(next)
+    localStorage.setItem("mojno_event_registrations", JSON.stringify(next))
+    toast.success("Заявка удалена")
+  }
 
   const persist = (next: CustomEvent[]) => {
     writeCustomEvents(next)
@@ -651,6 +687,49 @@ function EventsTab() {
         <CategoriesManager open={categoriesOpen} onOpenChange={setCategoriesOpen} />
       )}
 
+      {pendingResident.length > 0 && (
+        <Panel title={`Заявки резидентов на подтверждение · ${pendingResident.length}`} icon="ShieldCheck">
+          <ul className="divide-y divide-black/5">
+            {allRegs.map((r, idx) => {
+              if (r.status !== "pending_admin") return null
+              return (
+                <li key={`${r.email}-${idx}`} className="py-3 flex items-center gap-3 flex-wrap">
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white">
+                    <Icon name="Gem" size={14} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{r.eventTitle}</div>
+                    <div className="text-xs text-black/55">
+                      {r.email} · {formatDate(r.date)} · {r.category}
+                    </div>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.18em] bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 py-1">
+                    Ожидает
+                  </span>
+                  <button
+                    onClick={() => updateRegStatus(idx, "paid")}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] uppercase tracking-[0.18em]"
+                  >
+                    <Icon name="Check" size={12} />
+                    Подтвердить
+                  </button>
+                  <button
+                    onClick={() => removeReg(idx)}
+                    className="p-1.5 rounded-full hover:bg-red-50 text-red-500"
+                    title="Отклонить"
+                  >
+                    <Icon name="X" size={14} />
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          <div className="text-xs text-black/45 px-2 pt-2">
+            Подтверждай записи резидентов и уточняй доплату при необходимости.
+          </div>
+        </Panel>
+      )}
+
       {customEvents.length > 0 && (
         <Panel title="Команда добавила" icon="Star">
           <ul className="divide-y divide-black/5">
@@ -667,6 +746,9 @@ function EventsTab() {
                 </div>
                 <div className="text-xs text-black/55">
                   Записано: {registrationsByTitle.get(e.title) || 0}
+                  {e.capacity && e.capacity > 0 && (
+                    <span className="text-black/40"> / {e.capacity}</span>
+                  )}
                 </div>
                 <button
                   onClick={() => setEditing(e)}
@@ -744,6 +826,9 @@ function EventForm({
   )
   const [location, setLocation] = useState(initial?.location || "")
   const [price, setPrice] = useState<string>(String(initial?.price ?? ""))
+  const [capacity, setCapacity] = useState<string>(
+    initial?.capacity ? String(initial.capacity) : ""
+  )
   const [speaker, setSpeaker] = useState(initial?.speaker || "")
   const [description, setDescription] = useState(initial?.description || "")
 
@@ -761,6 +846,7 @@ function EventForm({
       category: category as ClubEvent["category"],
       location,
       price: Number(price) || 0,
+      capacity: Number(capacity) > 0 ? Number(capacity) : undefined,
       speaker: speaker || undefined,
       description,
     }
@@ -826,6 +912,23 @@ function EventForm({
           <div className="space-y-1">
             <Label>Место*</Label>
             <Input value={location} onChange={(e) => setLocation(e.target.value)} required />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="flex items-center gap-1.5">
+              <Icon name="Users" size={13} className="text-pink-500" />
+              Максимум участниц
+              <span className="text-black/40 text-[11px] font-normal">
+                — оставь пустым, если без лимита
+              </span>
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+              placeholder="например, 12"
+            />
           </div>
 
           <div className="space-y-1">
