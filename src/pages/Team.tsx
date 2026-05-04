@@ -471,7 +471,64 @@ function MemberDetailDialog({
   onUpdate: (patch: Partial<User>) => void
 }) {
   const [notes, setNotes] = useState(user.notes || "")
+  const [topUpRub, setTopUpRub] = useState("")
+  const [topUpPts, setTopUpPts] = useState("")
   const isTeam = user.role === "team"
+
+  const applyTopUpRub = () => {
+    const n = Math.max(0, Math.round(Number(topUpRub) || 0))
+    if (n <= 0) {
+      toast.error("Введи сумму больше нуля")
+      return
+    }
+    onUpdate({ balance: (user.balance || 0) + n })
+    setTopUpRub("")
+    toast.success(
+      `Баланс пополнен на ${n.toLocaleString("ru-RU")} ₽ (тест)`,
+      { description: "Это тестовое начисление без подключения платёжной системы." }
+    )
+    try {
+      const inboxKey = `mojno_user_inbox_${user.email}`
+      const inboxRaw = localStorage.getItem(inboxKey)
+      const inbox = inboxRaw ? JSON.parse(inboxRaw) : []
+      const note = {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        title: `Баланс пополнен · +${n.toLocaleString("ru-RU")} ₽`,
+        description: "Команда клуба пополнила твой баланс (тестовое начисление).",
+        createdAt: new Date().toISOString(),
+        read: false,
+      }
+      localStorage.setItem(inboxKey, JSON.stringify([note, ...inbox]))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const applyTopUpPts = () => {
+    const n = Math.max(0, Math.round(Number(topUpPts) || 0))
+    if (n <= 0) {
+      toast.error("Введи количество баллов больше нуля")
+      return
+    }
+    onUpdate({ points: (user.points || 0) + n })
+    setTopUpPts("")
+    toast.success(`Начислено ${n.toLocaleString("ru-RU")} баллов (тест)`)
+    try {
+      const inboxKey = `mojno_user_inbox_${user.email}`
+      const inboxRaw = localStorage.getItem(inboxKey)
+      const inbox = inboxRaw ? JSON.parse(inboxRaw) : []
+      const note = {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        title: `Бонусные баллы · +${n.toLocaleString("ru-RU")}`,
+        description: "Команда клуба начислила тебе бонусные баллы.",
+        createdAt: new Date().toISOString(),
+        read: false,
+      }
+      localStorage.setItem(inboxKey, JSON.stringify([note, ...inbox]))
+    } catch {
+      /* ignore */
+    }
+  }
 
   const toggleTeam = () => {
     if (isTeam) {
@@ -548,6 +605,85 @@ function MemberDetailDialog({
             <Icon name="Save" size={14} />
             Сохранить заметку
           </button>
+        </div>
+
+        {/* Тестовое пополнение баланса и баллов */}
+        <div className="mt-4 rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50/70 via-rose-50/40 to-fuchsia-50/60 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Icon name="FlaskConical" size={14} className="text-pink-600" />
+            <div className="text-[11px] uppercase tracking-[0.2em] text-pink-700 font-medium">
+              Тестовое пополнение
+            </div>
+          </div>
+          <div className="text-[11px] text-black/55 mb-3">
+            Без подключения платёжной системы — для проверки сценариев. Сейчас:{" "}
+            <b>{(user.balance || 0).toLocaleString("ru-RU")} ₽</b> ·{" "}
+            <b>{(user.points || 0).toLocaleString("ru-RU")} баллов</b>.
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={topUpRub}
+                onChange={(e) => setTopUpRub(e.target.value)}
+                placeholder="Сумма ₽"
+                className="flex-1 px-3 py-2 rounded-xl border border-black/10 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+              <div className="flex gap-1">
+                {[500, 1000, 5000].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setTopUpRub(String(v))}
+                    className="px-2.5 py-1 rounded-full border border-black/10 text-[11px] hover:bg-black/5"
+                  >
+                    +{v}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={applyTopUpRub}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs uppercase tracking-[0.18em]"
+              >
+                <Icon name="Wallet" size={12} />
+                Пополнить
+              </button>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={topUpPts}
+                onChange={(e) => setTopUpPts(e.target.value)}
+                placeholder="Кол-во баллов"
+                className="flex-1 px-3 py-2 rounded-xl border border-black/10 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+              <div className="flex gap-1">
+                {[100, 500, 1000].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setTopUpPts(String(v))}
+                    className="px-2.5 py-1 rounded-full border border-black/10 text-[11px] hover:bg-black/5"
+                  >
+                    +{v}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={applyTopUpPts}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs uppercase tracking-[0.18em]"
+              >
+                <Icon name="Sparkles" size={12} />
+                Начислить
+              </button>
+            </div>
+          </div>
         </div>
 
         <button
@@ -700,6 +836,7 @@ function EventsTab() {
   const [creating, setCreating] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [allRegs, setAllRegs] = useState<RegistrationRow[]>([])
+  const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
 
   const reloadRegs = () => {
     try {
@@ -723,6 +860,115 @@ function EventsTab() {
     })
     return map
   }, [allRegs])
+
+  const registrationsListByTitle = useMemo(() => {
+    const map = new Map<string, RegistrationRow[]>()
+    allRegs.forEach((r) => {
+      if (!r.eventTitle) return
+      const arr = map.get(r.eventTitle) || []
+      arr.push(r)
+      map.set(r.eventTitle, arr)
+    })
+    return map
+  }, [allRegs])
+
+  const roleVisual = (role?: string) => {
+    const r = role || "member"
+    if (r === "team")
+      return {
+        icon: "Crown",
+        label: "Команда",
+        chip: "bg-gradient-to-r from-amber-400 via-pink-500 to-fuchsia-500 text-white border-transparent",
+        row: "bg-gradient-to-r from-amber-50 via-pink-50 to-fuchsia-50 border-pink-200",
+      }
+    if (r === "blogger")
+      return {
+        icon: "Camera",
+        label: "Блогер",
+        chip: "bg-pink-100 text-pink-700 border-pink-200",
+        row: "bg-pink-50/60 border-pink-100",
+      }
+    if (r === "resident")
+      return {
+        icon: "Gem",
+        label: "Резидент",
+        chip: "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
+        row: "bg-fuchsia-50/60 border-fuchsia-100",
+      }
+    return {
+      icon: "Heart",
+      label: "Участница",
+      chip: "bg-rose-50 text-rose-600 border-rose-100",
+      row: "bg-white border-black/5",
+    }
+  }
+
+  const statusVisual = (s?: string) => {
+    if (s === "paid")
+      return { label: "Оплачено", className: "bg-emerald-100 text-emerald-700 border-emerald-200" }
+    if (s === "pending_admin")
+      return { label: "Ждёт админа", className: "bg-amber-100 text-amber-700 border-amber-200" }
+    if (s === "deposit")
+      return { label: "С депозита", className: "bg-pink-100 text-pink-700 border-pink-200" }
+    if (s === "cancel_pending")
+      return { label: "Отмена в обработке", className: "bg-orange-100 text-orange-700 border-orange-200" }
+    if (s === "cancelled")
+      return { label: "Отменено", className: "bg-stone-100 text-stone-600 border-stone-200" }
+    return { label: "—", className: "bg-stone-100 text-stone-600 border-stone-200" }
+  }
+
+  const renderParticipants = (eventTitle: string) => {
+    const list = (registrationsListByTitle.get(eventTitle) || []).slice().sort(
+      (a, b) => new Date(a.registeredAt).getTime() - new Date(b.registeredAt).getTime()
+    )
+    if (list.length === 0) {
+      return (
+        <div className="rounded-xl bg-black/[0.02] border border-dashed border-black/10 px-4 py-6 text-center text-xs text-black/45">
+          На это мероприятие ещё никто не записался
+        </div>
+      )
+    }
+    return (
+      <ul className="space-y-1.5">
+        {list.map((r, i) => {
+          const rv = roleVisual(r.role)
+          const sv = statusVisual(r.status)
+          return (
+            <li
+              key={`${r.email}-${r.registeredAt}-${i}`}
+              className={`flex items-center gap-2.5 flex-wrap rounded-xl border px-3 py-2 ${rv.row}`}
+            >
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/70 border border-white text-black/70 flex-shrink-0">
+                <Icon name={rv.icon} size={12} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium truncate">{r.email}</div>
+                <div className="text-[10px] text-black/55 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span>записалась {formatDateTime(r.registeredAt)}</span>
+                  {r.telegram && (
+                    <span className="inline-flex items-center gap-0.5">
+                      <Icon name="Send" size={10} />
+                      {r.telegram}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span
+                className={`text-[9px] uppercase tracking-[0.18em] rounded-full px-2 py-0.5 border ${rv.chip}`}
+              >
+                {rv.label}
+              </span>
+              <span
+                className={`text-[9px] uppercase tracking-[0.18em] rounded-full px-2 py-0.5 border ${sv.className}`}
+              >
+                {sv.label}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    )
+  }
 
   const pendingResident = useMemo(
     () => allRegs.filter((r) => r.status === "pending_admin"),
@@ -901,77 +1147,119 @@ function EventsTab() {
       {customEvents.length > 0 && (
         <Panel title="Команда добавила" icon="Star">
           <ul className="divide-y divide-black/5">
-            {customEvents.map((e) => (
-              <li key={e.id} className="py-2.5 flex items-center gap-3 flex-wrap">
-                <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white">
-                  <Icon name="CalendarDays" size={14} />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{e.title}</div>
-                  <div className="text-xs text-black/55">
-                    {formatDate(e.date)} · {e.time} · {e.location}
+            {customEvents.map((e) => {
+              const isOpen = expandedEvent === e.title
+              const count = registrationsByTitle.get(e.title) || 0
+              return (
+                <li key={e.id} className="py-2.5">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedEvent(isOpen ? null : e.title)}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl hover:bg-black/[0.03] -mx-2 px-2 py-1 transition-colors"
+                    >
+                      <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white flex-shrink-0">
+                        <Icon name="CalendarDays" size={14} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate flex items-center gap-1.5">
+                          {e.title}
+                          <Icon
+                            name={isOpen ? "ChevronUp" : "ChevronDown"}
+                            size={14}
+                            className="text-black/40 flex-shrink-0"
+                          />
+                        </div>
+                        <div className="text-xs text-black/55">
+                          {formatDate(e.date)} · {e.time} · {e.location}
+                        </div>
+                      </div>
+                      <div className="text-xs text-black/55 flex-shrink-0">
+                        Записано: <b className="text-black/80">{count}</b>
+                        {e.capacity && e.capacity > 0 && (
+                          <span className="text-black/40"> / {e.capacity}</span>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => sendGroupLink(e)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                        e.groupLink
+                          ? "bg-sky-500 hover:bg-sky-600 text-white"
+                          : "border border-black/10 text-black/40 hover:bg-black/5"
+                      }`}
+                      title={
+                        e.groupLink
+                          ? "Отправить ссылку на Telegram-группу всем записанным"
+                          : "Сначала добавь ссылку на группу"
+                      }
+                    >
+                      <Icon name="Send" size={12} />
+                      Отправить ссылку
+                    </button>
+                    <button
+                      onClick={() => setEditing(e)}
+                      className="p-2 rounded-full hover:bg-black/5"
+                      title="Редактировать"
+                    >
+                      <Icon name="Pencil" size={14} />
+                    </button>
+                    <button
+                      onClick={() => remove(e.id)}
+                      className="p-2 rounded-full hover:bg-red-50 text-red-500"
+                      title="Удалить"
+                    >
+                      <Icon name="Trash2" size={14} />
+                    </button>
                   </div>
-                </div>
-                <div className="text-xs text-black/55">
-                  Записано: {registrationsByTitle.get(e.title) || 0}
-                  {e.capacity && e.capacity > 0 && (
-                    <span className="text-black/40"> / {e.capacity}</span>
+                  {isOpen && (
+                    <div className="mt-3 pl-12">{renderParticipants(e.title)}</div>
                   )}
-                </div>
-                <button
-                  onClick={() => sendGroupLink(e)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.18em] transition-colors ${
-                    e.groupLink
-                      ? "bg-sky-500 hover:bg-sky-600 text-white"
-                      : "border border-black/10 text-black/40 hover:bg-black/5"
-                  }`}
-                  title={
-                    e.groupLink
-                      ? "Отправить ссылку на Telegram-группу всем записанным"
-                      : "Сначала добавь ссылку на группу"
-                  }
-                >
-                  <Icon name="Send" size={12} />
-                  Отправить ссылку
-                </button>
-                <button
-                  onClick={() => setEditing(e)}
-                  className="p-2 rounded-full hover:bg-black/5"
-                  title="Редактировать"
-                >
-                  <Icon name="Pencil" size={14} />
-                </button>
-                <button
-                  onClick={() => remove(e.id)}
-                  className="p-2 rounded-full hover:bg-red-50 text-red-500"
-                  title="Удалить"
-                >
-                  <Icon name="Trash2" size={14} />
-                </button>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
         </Panel>
       )}
 
       <Panel title="Базовые мероприятия (только просмотр)" icon="CalendarDays">
         <ul className="divide-y divide-black/5">
-          {EVENTS.slice(0, 12).map((e, idx) => (
-            <li key={idx} className="py-2.5 flex items-center gap-3 flex-wrap">
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-stone-100 text-stone-600">
-                <Icon name="CalendarDays" size={14} />
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{e.title}</div>
-                <div className="text-xs text-black/55">
-                  {formatDate(e.date)} · {e.time} · {e.location}
-                </div>
-              </div>
-              <div className="text-xs text-black/55">
-                Записано: {registrationsByTitle.get(e.title) || 0}
-              </div>
-            </li>
-          ))}
+          {EVENTS.slice(0, 12).map((e, idx) => {
+            const isOpen = expandedEvent === e.title
+            const count = registrationsByTitle.get(e.title) || 0
+            return (
+              <li key={idx} className="py-2.5">
+                <button
+                  type="button"
+                  onClick={() => setExpandedEvent(isOpen ? null : e.title)}
+                  className="w-full flex items-center gap-3 flex-wrap text-left rounded-xl hover:bg-black/[0.03] -mx-2 px-2 py-1 transition-colors"
+                >
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-stone-100 text-stone-600 flex-shrink-0">
+                    <Icon name="CalendarDays" size={14} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate flex items-center gap-1.5">
+                      {e.title}
+                      <Icon
+                        name={isOpen ? "ChevronUp" : "ChevronDown"}
+                        size={14}
+                        className="text-black/40 flex-shrink-0"
+                      />
+                    </div>
+                    <div className="text-xs text-black/55">
+                      {formatDate(e.date)} · {e.time} · {e.location}
+                    </div>
+                  </div>
+                  <div className="text-xs text-black/55 flex-shrink-0">
+                    Записано: <b className="text-black/80">{count}</b>
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="mt-3 pl-12">{renderParticipants(e.title)}</div>
+                )}
+              </li>
+            )
+          })}
         </ul>
         <div className="text-xs text-black/45 px-2 pt-2">
           Показаны первые 12 из {EVENTS.length}
