@@ -13,6 +13,7 @@ import { toast } from "sonner"
 import { CATEGORIES, type EventCategory } from "@/data/events"
 import TopUpModal from "@/components/TopUpModal"
 import TeamBadge from "@/components/TeamBadge"
+import RoleBadge from "@/components/RoleBadge"
 
 interface Props {
   open: boolean
@@ -123,41 +124,65 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
         </DialogHeader>
 
         {/* Profile header */}
-        <div
-          className={`mt-2 rounded-2xl border p-5 flex items-center gap-4 ${
-            user.role === "team"
-              ? "bg-gradient-to-br from-amber-50 via-pink-50 to-fuchsia-50 border-amber-200"
-              : "bg-gradient-to-br from-pink-100 to-white border-black/10"
-          }`}
-        >
-          <div className="relative">
-            <div
-              className={`w-16 h-16 rounded-full text-white flex items-center justify-center text-xl font-medium ${
-                user.role === "team"
-                  ? "bg-gradient-to-br from-amber-400 via-pink-500 to-fuchsia-600 ring-2 ring-amber-300 ring-offset-2 ring-offset-white"
-                  : "bg-gradient-to-br from-pink-400 to-rose-500"
-              }`}
-            >
-              {initials || "—"}
-            </div>
-            {user.role === "team" && (
-              <span className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-pink-500 text-white shadow-md flex items-center justify-center border-2 border-white">
-                <Icon name="Crown" size={13} />
-              </span>
-            )}
-          </div>
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="text-xl font-medium" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                {user.firstName} {user.lastName}
+        {(() => {
+          const role = user.role
+          const isTeam = role === "team"
+          const isBlogger = role === "blogger"
+          const isResident = role === "resident"
+          const wrapClass = isTeam
+            ? "bg-gradient-to-br from-amber-50 via-pink-50 to-fuchsia-50 border-amber-200"
+            : isBlogger
+            ? "bg-gradient-to-br from-amber-50 via-pink-50 to-fuchsia-50 border-pink-200"
+            : isResident
+            ? "bg-gradient-to-br from-fuchsia-50 to-purple-50 border-fuchsia-200"
+            : "bg-gradient-to-br from-pink-100 to-white border-black/10"
+          const avatarClass = isTeam
+            ? "bg-gradient-to-br from-amber-400 via-pink-500 to-fuchsia-600 ring-2 ring-amber-300 ring-offset-2 ring-offset-white"
+            : isBlogger
+            ? "bg-gradient-to-br from-amber-400 via-pink-500 to-fuchsia-500 ring-2 ring-pink-300 ring-offset-2 ring-offset-white"
+            : isResident
+            ? "bg-gradient-to-br from-fuchsia-500 to-purple-600 ring-2 ring-fuchsia-300 ring-offset-2 ring-offset-white"
+            : "bg-gradient-to-br from-pink-400 to-rose-500"
+          const cornerIcon = isTeam ? "Crown" : isBlogger ? "Camera" : isResident ? "Gem" : null
+          const cornerGrad = isTeam
+            ? "from-amber-400 to-pink-500"
+            : isBlogger
+            ? "from-amber-400 via-pink-500 to-fuchsia-500"
+            : isResident
+            ? "from-fuchsia-500 to-purple-600"
+            : ""
+          return (
+            <div className={`mt-2 rounded-2xl border p-5 flex items-center gap-4 ${wrapClass}`}>
+              <div className="relative">
+                <div
+                  className={`w-16 h-16 rounded-full text-white flex items-center justify-center text-xl font-medium ${avatarClass}`}
+                >
+                  {initials || "—"}
+                </div>
+                {cornerIcon && (
+                  <span
+                    className={`absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br ${cornerGrad} text-white shadow-md flex items-center justify-center border-2 border-white`}
+                  >
+                    <Icon name={cornerIcon} size={13} />
+                  </span>
+                )}
               </div>
-              {user.role === "team" && (
-                <TeamBadge withLabel position={user.teamPosition || "Команда клуба"} />
-              )}
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="text-xl font-medium" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                    {user.firstName} {user.lastName}
+                  </div>
+                  {isTeam ? (
+                    <TeamBadge withLabel position={user.teamPosition || "Команда клуба"} />
+                  ) : (
+                    <RoleBadge role={role} withLabel />
+                  )}
+                </div>
+                <div className="text-xs text-black/55 uppercase tracking-[0.2em] mt-1">В клубе с {memberSince}</div>
+              </div>
             </div>
-            <div className="text-xs text-black/55 uppercase tracking-[0.2em] mt-1">В клубе с {memberSince}</div>
-          </div>
-        </div>
+          )
+        })()}
 
         {/* Team panel */}
         {user.role === "team" && (

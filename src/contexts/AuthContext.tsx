@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
 
-export type UserRole = "member" | "team"
+export type UserRole = "member" | "resident" | "blogger" | "team"
 
 export interface User {
   firstName: string
@@ -8,6 +8,8 @@ export interface User {
   email: string
   phone: string
   age?: string
+  birthDate?: string
+  telegram?: string
   interests?: string
   expectations?: string
   source?: string
@@ -23,6 +25,9 @@ export interface User {
 }
 
 export const REFERRAL_BONUS = 100
+export const STARTUP_BONUS = 300
+export const BLOGGER_BONUS = 10000
+export const BLOGGER_CODE = "BLOGGER-МОЖНО"
 
 interface TeamInvite {
   code: string
@@ -43,6 +48,8 @@ const findTeamInvite = (code?: string): TeamInvite | null => {
 }
 
 export const isTeamInviteCode = (code?: string): boolean => !!findTeamInvite(code)
+export const isBloggerCode = (code?: string): boolean =>
+  !!code && code.trim().toUpperCase() === BLOGGER_CODE.toUpperCase()
 
 interface AuthContextType {
   user: User | null
@@ -52,8 +59,10 @@ interface AuthContextType {
     data: Omit<User, "joinedAt" | "referralCode" | "invitedCount" | "points" | "referredBy" | "balance"> & {
       password: string
       referralCode?: string
+      desiredRole?: UserRole
+      bloggerCode?: string
     }
-  ) => Promise<{ ok: boolean; error?: string }>
+  ) => Promise<{ ok: boolean; error?: string; bonusPoints?: number; role?: UserRole }>
   logout: () => void
   updateProfile: (patch: Partial<User>) => void
   findInviterName: (code: string) => string | null
@@ -152,7 +161,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const refCode = data.referralCode?.trim()
-    const teamInvite = findTeamInvite(refCode)
+    const teamInvite = findTeamInvite(refCode) || findTeamInvite(data.bloggerCode)
+    const bloggerOk = isBloggerCode(data.bloggerCode)
 
     // Find inviter by referral code (only if it's NOT a team invite)
     let inviterEmail: string | undefined
@@ -163,7 +173,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (inviter) inviterEmail = inviter.email
     }
 
-    const { password, referralCode: _rc, ...rest } = data
+    // Determine final role
+    let finalRole: UserRole = data.desiredRole || "member"
+    let teamPosition: string | undefined
+    if (teamInvite) {
+      finalRole = "team"
+      teamPosition = teamInvite.position
+    } else if (data.desiredRole === "blogger" && bloggerOk) {
+      finalRole = "blogger"
+    } else if (data.desiredRole === "blogger" && !bloggerOk) {
+      finalRole = "member"
+    } else if (data.desiredRole === "team" && !teamInvite) {
+      return { ok: false, error: "Неверный код команды клуба" }
+    } else if (data.desiredRole === "resident") {
+      finalRole = "resident"
+    }
+
+    // Calculate startup points
+    let startupPoints = STARTUP_BONUS
+    if (finalRole === "blogger") startupPoints = BLOGGER_BONUS
+
+    const { password, referralCode: _rc, desiredRole: _dr, bloggerCode: _bc, ...rest } = data
     const newUser: StoredUser = {
       ...rest,
       password,
@@ -171,10 +201,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       referralCode: generateReferralCode(rest.firstName),
       referredBy: inviterEmail,
       invitedCount: 0,
-      points: 0,
+      points: startupPoints,
       balance: 0,
-      role: teamInvite ? "team" : "member",
-      teamPosition: teamInvite?.position,
+      role: finalRole,
+      teamPosition,
     }
 
     const next = [...users, newUser]
@@ -196,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { password: _pw, ...safe } = newUser
     setUser(safe)
     localStorage.setItem(STORAGE_SESSION, JSON.stringify(safe))
-    return { ok: true }
+    return { ok: true, bonusPoints: startupPoints, role: finalRole }
   }
 
   const findInviterName: AuthContextType["findInviterName"] = (code) => {
