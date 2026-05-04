@@ -42,10 +42,14 @@ interface StoredRegistration {
   category: Category
   date: string
   registeredAt: string
-  status: "paid" | "pending_admin" | "deposit"
+  status: "paid" | "pending_admin" | "deposit" | "cancel_pending" | "cancelled"
   role?: string
   amount?: number
+  pointsUsed?: number
+  cashPaid?: number
   telegram?: string
+  cancelReason?: string
+  cancelRequestedAt?: string
 }
 
 const readCustomEvents = (): ClubEvent[] => {
@@ -94,6 +98,7 @@ export default function EventsModal({ open, onOpenChange }: Props) {
   const [notifyPhone, setNotifyPhone] = useState("")
   const [reminder, setReminder] = useState("1d")
   const [comment, setComment] = useState("")
+  const [usePoints, setUsePoints] = useState(false)
 
   // Автозаполнение всех известных полей из профиля при открытии формы записи
   useEffect(() => {
@@ -140,6 +145,12 @@ export default function EventsModal({ open, onOpenChange }: Props) {
   const isTeam = role === "team"
   const insufficientBalance = isBlogger && dayEvent ? userBalance < dayEvent.price : false
 
+  // Скидка баллами для участниц/команды (макс 20% от стоимости, не больше доступных баллов)
+  const maxPointsForEvent = dayEvent ? Math.floor(dayEvent.price * 0.2) : 0
+  const canUsePoints = !isResident && !isBlogger && dayEvent && dayEvent.price > 0 && userBalance > 0
+  const pointsToUse = usePoints && canUsePoints ? Math.min(userBalance, maxPointsForEvent) : 0
+  const cashToPay = dayEvent ? dayEvent.price - pointsToUse : 0
+
   const toggleCategory = (c: Category) => {
     setActiveCategories((prev) => {
       const next = new Set(prev)
@@ -160,6 +171,7 @@ export default function EventsModal({ open, onOpenChange }: Props) {
     setNotifyPhone("")
     setReminder("1d")
     setComment("")
+    setUsePoints(false)
   }
 
   const handlePay = (e: React.FormEvent) => {
@@ -180,9 +192,12 @@ export default function EventsModal({ open, onOpenChange }: Props) {
     // Determine status by role
     let status: StoredRegistration["status"] = "paid"
     let amount = dayEvent.price
+    let pointsUsed = 0
+    let cashPaid = dayEvent.price
     if (isResident) {
       status = "pending_admin"
       amount = 0
+      cashPaid = 0
     } else if (isBlogger) {
       status = "deposit"
       if (userBalance < dayEvent.price) {
@@ -194,6 +209,15 @@ export default function EventsModal({ open, onOpenChange }: Props) {
       // списываем с депозита
       updateProfile({ points: userBalance - dayEvent.price })
       amount = dayEvent.price
+      pointsUsed = dayEvent.price
+      cashPaid = 0
+    } else {
+      // member / team: возможна доплата баллами до 20%
+      pointsUsed = pointsToUse
+      cashPaid = cashToPay
+      if (pointsUsed > 0) {
+        updateProfile({ points: userBalance - pointsUsed })
+      }
     }
 
     // Persist registration
@@ -209,6 +233,8 @@ export default function EventsModal({ open, onOpenChange }: Props) {
           status,
           role,
           amount,
+          pointsUsed,
+          cashPaid,
           telegram: `@${tgClean}`,
         })
         localStorage.setItem(REGISTRATIONS_KEY, JSON.stringify(list))
@@ -552,10 +578,55 @@ export default function EventsModal({ open, onOpenChange }: Props) {
                   </div>
                 </div>
               )}
+              {/* Доплата баллами — для member/team */}
+              {canUsePoints && (
+                <div className="rounded-xl border border-pink-100 bg-pink-50/40 p-3.5 space-y-2.5">
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={usePoints}
+                      onChange={(e) => setUsePoints(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-pink-600"
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-black/85 flex items-center gap-1.5">
+                        <Icon name="Sparkles" size={13} className="text-pink-500" />
+                        Использовать бонусные баллы
+                      </div>
+                      <div className="text-[11px] text-black/60 mt-0.5">
+                        Можно покрыть до 20% стоимости —
+                        максимум{" "}
+                        <b>{maxPointsForEvent.toLocaleString("ru-RU")}</b> баллов из
+                        твоих <b>{userBalance.toLocaleString("ru-RU")}</b>.
+                      </div>
+                    </div>
+                  </label>
+                  {usePoints && (
+                    <div className="grid grid-cols-2 gap-2 pt-1.5">
+                      <div className="rounded-lg bg-white border border-black/5 px-3 py-2">
+                        <div className="text-[9px] uppercase tracking-[0.18em] text-black/45">
+                          Баллами
+                        </div>
+                        <div className="text-base font-semibold text-pink-600">
+                          −{pointsToUse.toLocaleString("ru-RU")}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-white border border-black/5 px-3 py-2">
+                        <div className="text-[9px] uppercase tracking-[0.18em] text-black/45">
+                          К оплате рублями
+                        </div>
+                        <div className="text-base font-semibold">
+                          {cashToPay.toLocaleString("ru-RU")} ₽
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {!isResident && !isBlogger && !isTeam && (
                 <div className="flex items-center gap-2 text-xs text-black/55 bg-black/[0.03] rounded-xl px-3 py-2">
                   <Icon name="ShieldCheck" size={14} />
-                  Безопасная оплата · возврат при отмене за 24 часа
+                  Безопасная оплата · при отмене бронирования сумма возвращается баллами
                 </div>
               )}
 
@@ -582,7 +653,9 @@ export default function EventsModal({ open, onOpenChange }: Props) {
                   className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-black text-white text-sm uppercase tracking-[0.2em] hover:bg-black/85 transition-colors"
                 >
                   <Icon name="CreditCard" size={16} />
-                  Оплатить {dayEvent.price.toLocaleString("ru-RU")} ₽
+                  {pointsToUse > 0
+                    ? `Оплатить ${cashToPay.toLocaleString("ru-RU")} ₽ + ${pointsToUse.toLocaleString("ru-RU")} баллов`
+                    : `Оплатить ${dayEvent.price.toLocaleString("ru-RU")} ₽`}
                 </button>
               )}
             </form>

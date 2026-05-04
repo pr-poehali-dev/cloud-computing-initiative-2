@@ -574,11 +574,15 @@ interface RegistrationRow {
   category: string
   date: string
   registeredAt: string
-  status?: "paid" | "pending_admin" | "deposit"
+  status?: "paid" | "pending_admin" | "deposit" | "cancel_pending" | "cancelled"
   role?: string
   amount?: number
+  pointsUsed?: number
+  cashPaid?: number
   surcharge?: number
   telegram?: string
+  cancelReason?: string
+  cancelRequestedAt?: string
 }
 
 function ResidentRequestRow({
@@ -990,11 +994,15 @@ function EventsTab() {
 
 /* ───────── All Registrations ───────── */
 
-const STATUS_FILTERS: { id: "all" | "paid" | "pending_admin" | "deposit"; label: string; color: string; icon: string }[] = [
+type StatusFilter = "all" | "paid" | "pending_admin" | "deposit" | "cancel_pending" | "cancelled"
+
+const STATUS_FILTERS: { id: StatusFilter; label: string; color: string; icon: string }[] = [
   { id: "all", label: "Все", color: "bg-black text-white", icon: "List" },
   { id: "pending_admin", label: "Ожидают админа", color: "bg-amber-100 text-amber-700 border border-amber-200", icon: "Clock" },
   { id: "paid", label: "Оплачено", color: "bg-emerald-100 text-emerald-700 border border-emerald-200", icon: "CheckCircle2" },
   { id: "deposit", label: "С депозита", color: "bg-pink-100 text-pink-700 border border-pink-200", icon: "Wallet" },
+  { id: "cancel_pending", label: "Отмена в обработке", color: "bg-orange-100 text-orange-700 border border-orange-200", icon: "X" },
+  { id: "cancelled", label: "Отменено", color: "bg-stone-100 text-stone-600 border border-stone-200", icon: "XCircle" },
 ]
 
 const ROLE_FILTERS: { id: "all" | "member" | "resident" | "blogger" | "team"; label: string; icon: string }[] = [
@@ -1101,7 +1109,7 @@ function SendGroupLinkRow({
 function RegistrationsTab() {
   const [allRegs, setAllRegs] = useState<RegistrationRow[]>([])
   const [customEvents, setCustomEvents] = useState<CustomEvent[]>([])
-  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending_admin" | "deposit">("all")
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [roleFilter, setRoleFilter] = useState<"all" | "member" | "resident" | "blogger" | "team">("all")
   const [search, setSearch] = useState("")
 
@@ -1199,6 +1207,118 @@ function RegistrationsTab() {
     )
   }
 
+  const cancelRequests = useMemo(
+    () => allRegs.filter((r) => r.status === "cancel_pending"),
+    [allRegs]
+  )
+
+  const approveCancel = (target: RegistrationRow) => {
+    const refund =
+      (target.cashPaid || 0) + (target.pointsUsed || 0) || target.amount || 0
+    if (refund <= 0) {
+      // Просто пометим как отменённое
+    }
+    // Обновим запись
+    const next = allRegs.map((r) =>
+      r.email === target.email &&
+      r.eventTitle === target.eventTitle &&
+      r.registeredAt === target.registeredAt
+        ? { ...r, status: "cancelled" as const }
+        : r
+    )
+    setAllRegs(next)
+    localStorage.setItem("mojno_event_registrations", JSON.stringify(next))
+
+    // Начислим баллы пользователю в mojno_users
+    if (refund > 0) {
+      try {
+        const usersRaw = localStorage.getItem("mojno_users")
+        const users = usersRaw ? JSON.parse(usersRaw) : []
+        if (Array.isArray(users)) {
+          const idx = users.findIndex(
+            (u: { email?: string }) => u.email === target.email
+          )
+          if (idx >= 0) {
+            users[idx] = {
+              ...users[idx],
+              points: (users[idx].points || 0) + refund,
+            }
+            localStorage.setItem("mojno_users", JSON.stringify(users))
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // Уведомление пользователю
+    try {
+      const inboxKey = `mojno_user_inbox_${target.email}`
+      const inboxRaw = localStorage.getItem(inboxKey)
+      const inbox = inboxRaw ? JSON.parse(inboxRaw) : []
+      const note = {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        title:
+          refund > 0
+            ? `Отмена подтверждена · возврат ${refund.toLocaleString("ru-RU")} баллов`
+            : "Отмена подтверждена",
+        description:
+          refund > 0
+            ? `Запись на «${target.eventTitle}» отменена. На твой счёт зачислено ${refund.toLocaleString("ru-RU")} бонусных баллов — потрать их на следующие мероприятия.`
+            : `Запись на «${target.eventTitle}» отменена.`,
+        createdAt: new Date().toISOString(),
+        read: false,
+        eventTitle: target.eventTitle,
+        eventDate: target.date,
+      }
+      localStorage.setItem(inboxKey, JSON.stringify([note, ...inbox]))
+    } catch {
+      /* ignore */
+    }
+
+    toast.success(
+      refund > 0
+        ? `Отмена подтверждена · участнице возвращено ${refund.toLocaleString("ru-RU")} баллов`
+        : "Отмена подтверждена"
+    )
+  }
+
+  const rejectCancel = (target: RegistrationRow) => {
+    if (!window.confirm("Отклонить запрос на отмену? Запись останется активной.")) return
+    // Возвращаем статус к paid (или прежнему — здесь упрощённо к paid)
+    const prevStatus: RegistrationRow["status"] =
+      target.role === "blogger" ? "deposit" : target.role === "resident" ? "paid" : "paid"
+    const next = allRegs.map((r) =>
+      r.email === target.email &&
+      r.eventTitle === target.eventTitle &&
+      r.registeredAt === target.registeredAt
+        ? { ...r, status: prevStatus, cancelReason: undefined, cancelRequestedAt: undefined }
+        : r
+    )
+    setAllRegs(next)
+    localStorage.setItem("mojno_event_registrations", JSON.stringify(next))
+
+    try {
+      const inboxKey = `mojno_user_inbox_${target.email}`
+      const inboxRaw = localStorage.getItem(inboxKey)
+      const inbox = inboxRaw ? JSON.parse(inboxRaw) : []
+      const note = {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        title: "Запрос на отмену отклонён",
+        description: `Запись на «${target.eventTitle}» осталась активной. Свяжись с администратором, если есть вопросы.`,
+        createdAt: new Date().toISOString(),
+        read: false,
+        eventTitle: target.eventTitle,
+        eventDate: target.date,
+      }
+      localStorage.setItem(inboxKey, JSON.stringify([note, ...inbox]))
+    } catch {
+      /* ignore */
+    }
+
+    toast.success("Запрос на отмену отклонён")
+  }
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return [...allRegs]
@@ -1219,8 +1339,9 @@ function RegistrationsTab() {
     const pending = allRegs.filter((r) => r.status === "pending_admin").length
     const paid = allRegs.filter((r) => r.status === "paid").length
     const deposit = allRegs.filter((r) => r.status === "deposit").length
+    const cancelPending = allRegs.filter((r) => r.status === "cancel_pending").length
     const surchargeSum = allRegs.reduce((s, r) => s + (r.surcharge || 0), 0)
-    return { total, pending, paid, deposit, surchargeSum }
+    return { total, pending, paid, deposit, cancelPending, surchargeSum }
   }, [allRegs])
 
   const removeReg = (target: RegistrationRow) => {
@@ -1276,6 +1397,8 @@ function RegistrationsTab() {
     if (s === "pending_admin") return { label: "Ожидает админа", className: "bg-amber-100 text-amber-700 border-amber-200" }
     if (s === "paid") return { label: "Оплачено", className: "bg-emerald-100 text-emerald-700 border-emerald-200" }
     if (s === "deposit") return { label: "С депозита", className: "bg-pink-100 text-pink-700 border-pink-200" }
+    if (s === "cancel_pending") return { label: "Отмена в обработке", className: "bg-orange-100 text-orange-700 border-orange-200" }
+    if (s === "cancelled") return { label: "Отменено", className: "bg-stone-100 text-stone-600 border-stone-200" }
     return { label: "—", className: "bg-stone-100 text-stone-600 border-stone-200" }
   }
 
@@ -1309,16 +1432,87 @@ function RegistrationsTab() {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <MetricCard icon="ClipboardList" value={counts.total} label="Всего заявок" />
         <MetricCard icon="Clock" value={counts.pending} label="Ожидают админа" />
         <MetricCard icon="CheckCircle2" value={counts.paid} label="Подтверждено" />
+        <MetricCard icon="X" value={counts.cancelPending} label="Запросы отмены" />
         <MetricCard
           icon="Wallet"
           value={`${counts.surchargeSum.toLocaleString("ru-RU")} ₽`}
           label="Сумма доплат"
         />
       </div>
+
+      {/* Запросы на отмену */}
+      {cancelRequests.length > 0 && (
+        <Panel
+          title={`Запросы на отмену · ${cancelRequests.length}`}
+          icon="XCircle"
+        >
+          <ul className="divide-y divide-black/5">
+            {cancelRequests.map((r, i) => {
+              const refund =
+                (r.cashPaid || 0) + (r.pointsUsed || 0) || r.amount || 0
+              return (
+                <li
+                  key={`${r.email}-${r.registeredAt}-${i}`}
+                  className="py-3 flex items-start gap-3 flex-wrap"
+                >
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-orange-500 text-white flex-shrink-0">
+                    <Icon name="X" size={14} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">
+                      {r.eventTitle}
+                    </div>
+                    <div className="text-xs text-black/55 mt-0.5">
+                      {r.email} · {formatDate(r.date)} · {r.category}
+                    </div>
+                    <div className="text-[11px] text-black/45 mt-0.5">
+                      Запрос:{" "}
+                      {r.cancelRequestedAt
+                        ? formatDateTime(r.cancelRequestedAt)
+                        : "—"}
+                      {refund > 0 && (
+                        <>
+                          {" · К возврату: "}
+                          <b>{refund.toLocaleString("ru-RU")} баллов</b>
+                        </>
+                      )}
+                    </div>
+                    {r.cancelReason && (
+                      <div className="mt-2 text-[12px] text-black/75 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 italic">
+                        «{r.cancelReason}»
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => approveCancel(r)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] uppercase tracking-[0.18em]"
+                    >
+                      <Icon name="Check" size={12} />
+                      Подтвердить и вернуть баллами
+                    </button>
+                    <button
+                      onClick={() => rejectCancel(r)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-black/15 hover:bg-black/5 text-black/65 text-[11px] uppercase tracking-[0.18em]"
+                    >
+                      <Icon name="RotateCcw" size={12} />
+                      Отклонить
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+          <div className="text-xs text-black/45 px-2 pt-2">
+            При подтверждении сумма возвращается участнице бонусными баллами и
+            ей приходит уведомление.
+          </div>
+        </Panel>
+      )}
 
       {/* Быстрые действия — рассылка ссылки на группу */}
       {eventGroups.length > 0 && (
