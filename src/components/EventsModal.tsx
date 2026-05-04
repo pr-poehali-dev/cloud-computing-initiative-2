@@ -353,6 +353,15 @@ export default function EventsModal({ open, onOpenChange }: Props) {
 
                     {dayEvent ? (
                       <>
+                        {dayEvent.image && (
+                          <div className="-mx-5 -mt-5 mb-3 overflow-hidden">
+                            <img
+                              src={dayEvent.image}
+                              alt={dayEvent.title}
+                              className="w-full aspect-[16/9] object-cover"
+                            />
+                          </div>
+                        )}
                         <span className={`inline-flex items-center gap-1.5 self-start px-3 py-1 rounded-full text-xs text-white bg-gradient-to-r ${categoryMeta(dayEvent.category).color} mb-3`}>
                           <Icon name={categoryMeta(dayEvent.category).icon} size={12} />
                           {dayEvent.category}
@@ -454,13 +463,22 @@ export default function EventsModal({ open, onOpenChange }: Props) {
 
             {/* Event summary card */}
             <div className="mt-2 rounded-2xl bg-gradient-to-br from-pink-50 to-white border border-black/10 p-4 flex items-center justify-between gap-4">
-              <div className="space-y-1">
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] text-white bg-gradient-to-r ${categoryMeta(dayEvent.category).color}`}>
-                  <Icon name={categoryMeta(dayEvent.category).icon} size={11} />
-                  {dayEvent.category}
-                </span>
-                <div className="text-sm text-black/70 flex items-center gap-3">
-                  <span className="inline-flex items-center gap-1"><Icon name="MapPin" size={13} />{dayEvent.location}</span>
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {dayEvent.image && (
+                  <img
+                    src={dayEvent.image}
+                    alt={dayEvent.title}
+                    className="w-14 h-14 rounded-xl object-cover border border-black/10 flex-shrink-0"
+                  />
+                )}
+                <div className="space-y-1 min-w-0">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] text-white bg-gradient-to-r ${categoryMeta(dayEvent.category).color}`}>
+                    <Icon name={categoryMeta(dayEvent.category).icon} size={11} />
+                    {dayEvent.category}
+                  </span>
+                  <div className="text-sm text-black/70 flex items-center gap-3">
+                    <span className="inline-flex items-center gap-1 truncate"><Icon name="MapPin" size={13} />{dayEvent.location}</span>
+                  </div>
                 </div>
               </div>
               <div className="text-right">

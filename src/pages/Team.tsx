@@ -2409,38 +2409,43 @@ function EventForm({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onCancel()}>
-      <DialogContent className="sm:max-w-[560px]">
-        <DialogHeader>
-          <DialogTitle>{initial ? "Редактировать мероприятие" : "Новое мероприятие"}</DialogTitle>
-          <DialogDescription>Заполни информацию о встрече</DialogDescription>
+      <DialogContent className="sm:max-w-[560px] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-black/5 flex-shrink-0">
+          <DialogTitle className="text-base">
+            {initial ? "Редактировать мероприятие" : "Новое мероприятие"}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Заполни информацию о встрече
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={submit} className="space-y-3">
+        <form
+          onSubmit={submit}
+          className="flex flex-col flex-1 min-h-0 overflow-hidden"
+        >
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
           {/* Иконка-фото */}
-          <div className="space-y-1.5">
-            <Label className="flex items-center gap-1.5">
-              <Icon name="ImagePlus" size={13} className="text-pink-500" />
-              Иконка мероприятия (фото)
-              <span className="text-black/40 text-[11px] font-normal">
-                — необязательно, до 1.5 МБ
-              </span>
-            </Label>
-            <div className="flex items-center gap-3">
-              <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-pink-100 to-rose-100 border border-pink-200 flex-shrink-0 flex items-center justify-center">
-                {image ? (
-                  <img
-                    src={image}
-                    alt="Иконка"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Icon name="ImageOff" size={22} className="text-pink-400/70" />
-                )}
-              </div>
-              <div className="flex-1 flex flex-col gap-1.5">
-                <label className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-pink-50 border border-pink-200 hover:bg-pink-100 text-pink-700 text-[11px] uppercase tracking-[0.18em] cursor-pointer">
-                  <Icon name="Upload" size={12} />
-                  {image ? "Заменить фото" : "Загрузить фото"}
+          <div className="flex items-center gap-3">
+            <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-br from-pink-100 to-rose-100 border border-pink-200 flex-shrink-0 flex items-center justify-center">
+              {image ? (
+                <img
+                  src={image}
+                  alt="Иконка"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Icon name="ImageOff" size={20} className="text-pink-400/70" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <Label className="flex items-center gap-1.5 text-[11px]">
+                <Icon name="ImagePlus" size={12} className="text-pink-500" />
+                Иконка мероприятия (фото)
+              </Label>
+              <div className="flex gap-1.5 mt-1.5">
+                <label className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-50 border border-pink-200 hover:bg-pink-100 text-pink-700 text-[10px] uppercase tracking-[0.18em] cursor-pointer">
+                  <Icon name="Upload" size={11} />
+                  {image ? "Заменить" : "Загрузить"}
                   <input
                     type="file"
                     accept="image/*"
@@ -2452,10 +2457,10 @@ function EventForm({
                   <button
                     type="button"
                     onClick={() => setImage(undefined)}
-                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-black/10 hover:bg-black/5 text-black/55 text-[11px] uppercase tracking-[0.18em]"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full border border-black/10 hover:bg-black/5 text-black/55 text-[10px] uppercase tracking-[0.18em]"
                   >
-                    <Icon name="X" size={12} />
-                    Убрать фото
+                    <Icon name="X" size={11} />
+                    Убрать
                   </button>
                 )}
               </div>
@@ -2561,7 +2566,9 @@ function EventForm({
             />
           </div>
 
-          <div className="flex gap-2 pt-2">
+          </div>
+
+          <div className="flex gap-2 px-6 py-3 border-t border-black/5 bg-white flex-shrink-0">
             <button
               type="button"
               onClick={onCancel}
