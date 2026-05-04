@@ -38,20 +38,42 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
     if (!open || !user) return
     try {
       const all = JSON.parse(localStorage.getItem("mojno_users") || "[]") as Array<
-        { email: string; invitedCount?: number; points?: number; balance?: number }
+        {
+          email: string
+          invitedCount?: number
+          invitedByRole?: { member: number; resident: number; blogger: number; team: number }
+          points?: number
+          balance?: number
+        }
       >
       const fresh = all.find((u) => u.email === user.email)
-      if (
-        fresh &&
-        ((fresh.invitedCount ?? 0) !== (user.invitedCount ?? 0) ||
-          (fresh.points ?? 0) !== (user.points ?? 0) ||
-          (fresh.balance ?? 0) !== (user.balance ?? 0))
-      ) {
-        updateProfile({
-          invitedCount: fresh.invitedCount ?? 0,
-          points: fresh.points ?? 0,
-          balance: fresh.balance ?? 0,
-        })
+      if (fresh) {
+        const patch: Record<string, unknown> = {}
+        if ((fresh.invitedCount ?? 0) !== (user.invitedCount ?? 0))
+          patch.invitedCount = fresh.invitedCount ?? 0
+        if ((fresh.points ?? 0) !== (user.points ?? 0)) patch.points = fresh.points ?? 0
+        if ((fresh.balance ?? 0) !== (user.balance ?? 0)) patch.balance = fresh.balance ?? 0
+        if (
+          JSON.stringify(fresh.invitedByRole || {}) !== JSON.stringify(user.invitedByRole || {})
+        )
+          patch.invitedByRole = fresh.invitedByRole
+        if (Object.keys(patch).length > 0) updateProfile(patch as Partial<typeof user>)
+      }
+
+      // Подтянуть персональные уведомления (доплаты от админа и пр.)
+      const inboxKey = `mojno_user_inbox_${user.email}`
+      const inboxRaw = localStorage.getItem(inboxKey)
+      if (inboxRaw) {
+        const inbox = JSON.parse(inboxRaw)
+        if (Array.isArray(inbox) && inbox.length > 0) {
+          const existing = JSON.parse(localStorage.getItem("mojno_notif_items") || "[]")
+          const merged = [...inbox, ...(Array.isArray(existing) ? existing : [])]
+          localStorage.setItem("mojno_notif_items", JSON.stringify(merged))
+          localStorage.removeItem(inboxKey)
+          if (inbox[0]?.title) {
+            toast.info(inbox[0].title, { description: inbox[0].description })
+          }
+        }
       }
     } catch {
       /* ignore */
@@ -218,19 +240,40 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
           </div>
         )}
 
-        {/* Balance block */}
+        {/* Balance block — рубли + бонусные баллы вместе */}
         <div className="mt-3 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white p-5 shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.22em] text-white/80">Баланс</div>
-              <div className="text-3xl font-semibold mt-1" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+          <div className="text-[11px] uppercase tracking-[0.22em] text-white/80 mb-3">
+            Баланс
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-white/15 backdrop-blur-sm p-3">
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-white/85">
+                <Icon name="Wallet" size={12} />
+                Рубли
+              </div>
+              <div
+                className="text-2xl font-semibold mt-1"
+                style={{ fontFamily: "'Cormorant Garamond', serif" }}
+              >
                 {(user.balance || 0).toLocaleString("ru-RU")} ₽
               </div>
-              <div className="text-[11px] text-white/70 mt-1">
-                Используется при записи на мероприятия
+              <div className="text-[10px] text-white/70 mt-0.5">для оплаты мероприятий</div>
+            </div>
+            <div className="rounded-xl bg-white/15 backdrop-blur-sm p-3">
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-white/85">
+                <Icon name="Sparkles" size={12} />
+                Бонусные баллы
+              </div>
+              <div
+                className="text-2xl font-semibold mt-1"
+                style={{ fontFamily: "'Cormorant Garamond', serif" }}
+              >
+                {(user.points || 0).toLocaleString("ru-RU")}
+              </div>
+              <div className="text-[10px] text-white/70 mt-0.5">
+                {user.role === "blogger" ? "депозит блогера" : "стартовые и за приглашения"}
               </div>
             </div>
-            <Icon name="Wallet" size={36} className="text-white/85" />
           </div>
           <button
             onClick={() => setTopUpOpen(true)}
@@ -261,6 +304,44 @@ export default function ProfileModal({ open, onOpenChange }: Props) {
           <Stat icon="UserPlus" value={String(user.invitedCount || 0)} label="Подруг приглашено" />
           <Stat icon="Sparkles" value={String(user.points || 0)} label="Баллов" />
         </div>
+
+        {/* Invited breakdown by role */}
+        {(user.invitedCount || 0) > 0 && user.invitedByRole && (
+          <div className="mt-3 rounded-2xl border border-black/10 bg-white p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Icon name="Users" size={14} className="text-pink-600" />
+              <div className="text-[11px] uppercase tracking-[0.18em] text-black/60">
+                Приглашённые — по статусам
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <InviteStatRow
+                icon="Heart"
+                label="Участницы"
+                count={user.invitedByRole.member || 0}
+                color="from-pink-400 to-rose-500"
+              />
+              <InviteStatRow
+                icon="Gem"
+                label="Резиденты"
+                count={user.invitedByRole.resident || 0}
+                color="from-fuchsia-500 to-purple-600"
+              />
+              <InviteStatRow
+                icon="Camera"
+                label="Блогеры"
+                count={user.invitedByRole.blogger || 0}
+                color="from-amber-400 via-pink-500 to-fuchsia-500"
+              />
+              <InviteStatRow
+                icon="Crown"
+                label="Команда"
+                count={user.invitedByRole.team || 0}
+                color="from-amber-500 via-orange-500 to-rose-500"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Favourite categories */}
         <div className="mt-4 rounded-2xl border border-black/10 bg-white p-5">
@@ -398,6 +479,36 @@ function Stat({ icon, value, label }: { icon: string; value: string; label: stri
       <Icon name={icon} size={18} className="mx-auto text-pink-500" />
       <div className="text-lg font-semibold mt-1">{value}</div>
       <div className="text-[10px] uppercase tracking-[0.18em] text-black/50">{label}</div>
+    </div>
+  )
+}
+
+function InviteStatRow({
+  icon,
+  label,
+  count,
+  color,
+}: {
+  icon: string
+  label: string
+  count: number
+  color: string
+}) {
+  return (
+    <div
+      className={`rounded-xl border px-3 py-2.5 flex items-center gap-2.5 ${
+        count > 0 ? "border-pink-200 bg-pink-50/40" : "border-black/10 bg-white"
+      }`}
+    >
+      <span
+        className={`inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br ${color} text-white flex-shrink-0`}
+      >
+        <Icon name={icon} size={12} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] uppercase tracking-[0.18em] text-black/55">{label}</div>
+        <div className="text-base font-semibold text-black/85 leading-tight">{count}</div>
+      </div>
     </div>
   )
 }

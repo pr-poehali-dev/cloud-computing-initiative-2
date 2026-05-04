@@ -117,17 +117,53 @@ export default function Header() {
               )}
             </button>
             {isAuthenticated ? (
-              <button
-                onClick={() => setProfileOpen(true)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.2em] transition-colors ${
-                  user?.role === "team"
+              (() => {
+                const role = user?.role
+                const styleByRole =
+                  role === "team"
                     ? "bg-gradient-to-r from-amber-400 via-pink-500 to-fuchsia-500 text-white hover:opacity-95"
+                    : role === "blogger"
+                    ? "bg-gradient-to-r from-amber-400 via-pink-500 to-fuchsia-500 text-white hover:opacity-95"
+                    : role === "resident"
+                    ? "bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-95"
                     : "bg-white/95 text-black hover:bg-white"
-                }`}
-              >
-                <Icon name={user?.role === "team" ? "Crown" : "User"} size={14} />
-                {user?.firstName || "Кабинет"}
-              </button>
+                const iconByRole =
+                  role === "team"
+                    ? "Crown"
+                    : role === "blogger"
+                    ? "Camera"
+                    : role === "resident"
+                    ? "Gem"
+                    : "User"
+                const labelByRole =
+                  role === "team"
+                    ? "Команда"
+                    : role === "blogger"
+                    ? "Блогер"
+                    : role === "resident"
+                    ? "Резидент"
+                    : null
+                return (
+                  <button
+                    onClick={() => setProfileOpen(true)}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.2em] transition-colors ${styleByRole}`}
+                  >
+                    <Icon name={iconByRole} size={14} />
+                    <span>{user?.firstName || "Кабинет"}</span>
+                    {labelByRole && (
+                      <span
+                        className={`hidden sm:inline-flex items-center text-[9px] uppercase tracking-[0.18em] rounded-full px-2 py-0.5 ${
+                          role === "team" || role === "blogger" || role === "resident"
+                            ? "bg-white/25 text-white"
+                            : "bg-black/10 text-black/70"
+                        }`}
+                      >
+                        {labelByRole}
+                      </span>
+                    )}
+                  </button>
+                )
+              })()
             ) : (
               <>
                 <button

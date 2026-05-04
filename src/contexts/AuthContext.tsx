@@ -2,6 +2,13 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 
 export type UserRole = "member" | "resident" | "blogger" | "team"
 
+export interface InviteStats {
+  member: number
+  resident: number
+  blogger: number
+  team: number
+}
+
 export interface User {
   firstName: string
   lastName: string
@@ -17,6 +24,7 @@ export interface User {
   referralCode: string
   referredBy?: string
   invitedCount: number
+  invitedByRole?: InviteStats
   points: number
   balance: number
   role?: UserRole
@@ -106,10 +114,18 @@ const generateReferralCode = (firstName: string) => {
   return `${base}-${suffix}`
 }
 
+const emptyInviteStats = (): InviteStats => ({
+  member: 0,
+  resident: 0,
+  blogger: 0,
+  team: 0,
+})
+
 const ensureUserDefaults = (u: StoredUser): StoredUser => ({
   ...u,
   referralCode: u.referralCode || generateReferralCode(u.firstName),
   invitedCount: typeof u.invitedCount === "number" ? u.invitedCount : 0,
+  invitedByRole: u.invitedByRole || emptyInviteStats(),
   points: typeof u.points === "number" ? u.points : 0,
   balance: typeof u.balance === "number" ? u.balance : 0,
 })
@@ -201,6 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       referralCode: generateReferralCode(rest.firstName),
       referredBy: inviterEmail,
       invitedCount: 0,
+      invitedByRole: emptyInviteStats(),
       points: startupPoints,
       balance: 0,
       role: finalRole,
@@ -209,14 +226,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const next = [...users, newUser]
 
-    // Award bonus to inviter
+    // Award bonus to inviter (с учётом роли приглашённой)
     if (inviterEmail) {
       const idx = next.findIndex((u) => u.email === inviterEmail)
       if (idx >= 0) {
         const inv = ensureUserDefaults(next[idx])
+        const stats = { ...emptyInviteStats(), ...(inv.invitedByRole || {}) }
+        stats[finalRole] = (stats[finalRole] || 0) + 1
         next[idx] = {
           ...inv,
           invitedCount: (inv.invitedCount || 0) + 1,
+          invitedByRole: stats,
           points: (inv.points || 0) + REFERRAL_BONUS,
         }
       }

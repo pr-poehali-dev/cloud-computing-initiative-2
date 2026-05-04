@@ -410,7 +410,7 @@ export default function AuthModal({ open, onOpenChange, initialMode = "login", o
                   required
                   value={accessCode}
                   onChange={(e) => setAccessCode(e.target.value)}
-                  placeholder={selectedRole === "blogger" ? "BLOGGER-МОЖНО" : "MOZHNO-…"}
+                  placeholder="Введи код"
                   className={codeOk && accessCode ? "border-pink-400 focus-visible:ring-pink-300" : ""}
                 />
                 {codeOk && accessCode && (

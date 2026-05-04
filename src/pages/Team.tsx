@@ -574,6 +574,105 @@ interface RegistrationRow {
   status?: "paid" | "pending_admin" | "deposit"
   role?: string
   amount?: number
+  surcharge?: number
+}
+
+function ResidentRequestRow({
+  reg,
+  onConfirm,
+  onReject,
+}: {
+  reg: RegistrationRow
+  onConfirm: (amount: number) => void
+  onReject: () => void
+}) {
+  const [surcharge, setSurcharge] = useState<string>("")
+  const [showInput, setShowInput] = useState(false)
+
+  return (
+    <li className="py-3 space-y-2">
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white">
+          <Icon name="Gem" size={14} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium truncate">{reg.eventTitle}</div>
+          <div className="text-xs text-black/55">
+            {reg.email} · {formatDate(reg.date)} · {reg.category}
+          </div>
+        </div>
+        <span className="text-[10px] uppercase tracking-[0.18em] bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 py-1">
+          Ожидает
+        </span>
+        <button
+          onClick={onReject}
+          className="p-1.5 rounded-full hover:bg-red-50 text-red-500"
+          title="Отклонить"
+        >
+          <Icon name="X" size={14} />
+        </button>
+      </div>
+
+      {!showInput ? (
+        <div className="flex flex-wrap gap-2 pl-12">
+          <button
+            onClick={() => onConfirm(0)}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] uppercase tracking-[0.18em]"
+          >
+            <Icon name="Check" size={12} />
+            Подтвердить бесплатно
+          </button>
+          <button
+            onClick={() => setShowInput(true)}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-pink-300 text-pink-700 hover:bg-pink-50 text-[11px] uppercase tracking-[0.18em]"
+          >
+            <Icon name="Wallet" size={12} />
+            С доплатой
+          </button>
+        </div>
+      ) : (
+        <div className="pl-12 flex flex-wrap items-center gap-2 bg-pink-50/50 border border-pink-100 rounded-xl p-3">
+          <div className="flex-1 min-w-[160px]">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-pink-700 mb-1">
+              Сумма доплаты
+            </div>
+            <Input
+              type="number"
+              min={0}
+              value={surcharge}
+              onChange={(e) => setSurcharge(e.target.value)}
+              placeholder="например, 1500"
+              className="h-9"
+              autoFocus
+            />
+          </div>
+          <button
+            onClick={() => {
+              const amount = Number(surcharge) || 0
+              if (amount <= 0) {
+                toast.error("Укажи сумму доплаты или подтверди бесплатно")
+                return
+              }
+              onConfirm(amount)
+            }}
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] uppercase tracking-[0.18em] mt-4"
+          >
+            <Icon name="Send" size={12} />
+            Отправить
+          </button>
+          <button
+            onClick={() => {
+              setShowInput(false)
+              setSurcharge("")
+            }}
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-full border border-black/10 text-black/60 hover:bg-black/5 text-[11px] uppercase tracking-[0.18em] mt-4"
+          >
+            Отмена
+          </button>
+        </div>
+      )}
+    </li>
+  )
 }
 
 function EventsTab() {
@@ -611,12 +710,43 @@ function EventsTab() {
     [allRegs]
   )
 
-  const updateRegStatus = (idx: number, newStatus: "paid" | "pending_admin") => {
+  const confirmResident = (idx: number, surcharge: number) => {
     const next = [...allRegs]
-    next[idx] = { ...next[idx], status: newStatus }
+    const reg = next[idx]
+    next[idx] = { ...reg, status: "paid", surcharge: surcharge > 0 ? surcharge : 0 }
     setAllRegs(next)
     localStorage.setItem("mojno_event_registrations", JSON.stringify(next))
-    toast.success(newStatus === "paid" ? "Запись подтверждена" : "Возвращено в ожидание")
+
+    // Персональное уведомление резиденту
+    try {
+      const inboxKey = `mojno_user_inbox_${reg.email}`
+      const inboxRaw = localStorage.getItem(inboxKey)
+      const inbox = inboxRaw ? JSON.parse(inboxRaw) : []
+      const note = {
+        id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        title:
+          surcharge > 0
+            ? `Запись подтверждена · доплата ${surcharge.toLocaleString("ru-RU")} ₽`
+            : "Запись подтверждена · бесплатно",
+        description:
+          surcharge > 0
+            ? `«${reg.eventTitle}»: администратор подтвердил твою запись. Доплата — ${surcharge.toLocaleString("ru-RU")} ₽. Реквизиты пришлём в Telegram.`
+            : `«${reg.eventTitle}»: администратор подтвердил твою запись. Для тебя как резидента — бесплатно.`,
+        createdAt: new Date().toISOString(),
+        read: false,
+        eventTitle: reg.eventTitle,
+        eventDate: reg.date,
+      }
+      localStorage.setItem(inboxKey, JSON.stringify([note, ...inbox]))
+    } catch {
+      /* ignore */
+    }
+
+    toast.success(
+      surcharge > 0
+        ? `Подтверждено · резиденту отправлена доплата ${surcharge.toLocaleString("ru-RU")} ₽`
+        : "Подтверждено бесплатно · уведомление отправлено резиденту"
+    )
   }
 
   const removeReg = (idx: number) => {
@@ -693,34 +823,12 @@ function EventsTab() {
             {allRegs.map((r, idx) => {
               if (r.status !== "pending_admin") return null
               return (
-                <li key={`${r.email}-${idx}`} className="py-3 flex items-center gap-3 flex-wrap">
-                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white">
-                    <Icon name="Gem" size={14} />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{r.eventTitle}</div>
-                    <div className="text-xs text-black/55">
-                      {r.email} · {formatDate(r.date)} · {r.category}
-                    </div>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-[0.18em] bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 py-1">
-                    Ожидает
-                  </span>
-                  <button
-                    onClick={() => updateRegStatus(idx, "paid")}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] uppercase tracking-[0.18em]"
-                  >
-                    <Icon name="Check" size={12} />
-                    Подтвердить
-                  </button>
-                  <button
-                    onClick={() => removeReg(idx)}
-                    className="p-1.5 rounded-full hover:bg-red-50 text-red-500"
-                    title="Отклонить"
-                  >
-                    <Icon name="X" size={14} />
-                  </button>
-                </li>
+                <ResidentRequestRow
+                  key={`${r.email}-${idx}`}
+                  reg={r}
+                  onConfirm={(amount) => confirmResident(idx, amount)}
+                  onReject={() => removeReg(idx)}
+                />
               )
             })}
           </ul>
