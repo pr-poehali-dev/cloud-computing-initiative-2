@@ -772,6 +772,47 @@ function EventsTab() {
     toast.success("Заявка удалена")
   }
 
+  const sendGroupLink = (event: CustomEvent) => {
+    if (!event.groupLink) {
+      toast.error("Сначала добавь ссылку на Telegram-группу в карточке мероприятия")
+      return
+    }
+    // Кому отправляем — все записанные на это мероприятие со статусом paid/deposit/pending_admin
+    const recipients = allRegs.filter(
+      (r) => r.eventTitle === event.title && r.status !== undefined
+    )
+    if (recipients.length === 0) {
+      toast.error("На это мероприятие пока никто не записан")
+      return
+    }
+    // Создаём персональное уведомление каждой записанной
+    let sent = 0
+    recipients.forEach((r) => {
+      try {
+        const inboxKey = `mojno_user_inbox_${r.email}`
+        const inboxRaw = localStorage.getItem(inboxKey)
+        const inbox = inboxRaw ? JSON.parse(inboxRaw) : []
+        const note = {
+          id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          title: `Ссылка на группу · ${event.title}`,
+          description: `Закрытая Telegram-группа мероприятия «${event.title}» (${formatDate(event.date)} в ${event.time}): ${event.groupLink}`,
+          createdAt: new Date().toISOString(),
+          read: false,
+          eventTitle: event.title,
+          eventDate: event.date,
+          link: event.groupLink,
+        }
+        localStorage.setItem(inboxKey, JSON.stringify([note, ...inbox]))
+        sent++
+      } catch {
+        /* ignore */
+      }
+    })
+    toast.success(`Ссылка отправлена · ${sent} ${sent === 1 ? "получатель" : "получателей"}`, {
+      description: `Появится в их уведомлениях при следующем входе.`,
+    })
+  }
+
   const persist = (next: CustomEvent[]) => {
     writeCustomEvents(next)
     setCustomEvents(next)
@@ -874,6 +915,22 @@ function EventsTab() {
                   )}
                 </div>
                 <button
+                  onClick={() => sendGroupLink(e)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                    e.groupLink
+                      ? "bg-sky-500 hover:bg-sky-600 text-white"
+                      : "border border-black/10 text-black/40 hover:bg-black/5"
+                  }`}
+                  title={
+                    e.groupLink
+                      ? "Отправить ссылку на Telegram-группу всем записанным"
+                      : "Сначала добавь ссылку на группу"
+                  }
+                >
+                  <Icon name="Send" size={12} />
+                  Отправить ссылку
+                </button>
+                <button
                   onClick={() => setEditing(e)}
                   className="p-2 rounded-full hover:bg-black/5"
                   title="Редактировать"
@@ -948,8 +1005,102 @@ const ROLE_FILTERS: { id: "all" | "member" | "resident" | "blogger" | "team"; la
   { id: "team", label: "Команда", icon: "Crown" },
 ]
 
+function SendGroupLinkRow({
+  title,
+  date,
+  count,
+  initialLink,
+  onSend,
+}: {
+  title: string
+  date: string
+  count: number
+  initialLink: string
+  onSend: (link: string) => void
+}) {
+  const [link, setLink] = useState(initialLink)
+  const [editing, setEditing] = useState(false)
+
+  return (
+    <li className="py-3 flex items-start gap-3 flex-wrap">
+      <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-sky-500 text-white flex-shrink-0">
+        <Icon name="Send" size={14} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium truncate">{title}</div>
+        <div className="text-xs text-black/55">
+          {formatDate(date)} · {count} {count === 1 ? "получатель" : "получателей"}
+        </div>
+        {!editing && link && (
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[11px] text-sky-600 hover:text-sky-700 mt-0.5 break-all"
+          >
+            <Icon name="Link" size={11} />
+            {link}
+          </a>
+        )}
+        {editing && (
+          <Input
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="https://t.me/+..."
+            className="h-8 mt-1.5"
+            autoFocus
+          />
+        )}
+      </div>
+      {!editing ? (
+        <>
+          <button
+            onClick={() => setEditing(true)}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-black/10 hover:bg-black/5 text-[11px] uppercase tracking-[0.18em]"
+            title="Изменить ссылку"
+          >
+            <Icon name="Pencil" size={12} />
+            {link ? "Изменить" : "Добавить"}
+          </button>
+          <button
+            onClick={() => onSend(link)}
+            disabled={!link.trim()}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[11px] uppercase tracking-[0.18em]"
+          >
+            <Icon name="Send" size={12} />
+            Отправить ссылку
+          </button>
+        </>
+      ) : (
+        <>
+          <button
+            onClick={() => {
+              onSend(link)
+              setEditing(false)
+            }}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-sky-500 hover:bg-sky-600 text-white text-[11px] uppercase tracking-[0.18em]"
+          >
+            <Icon name="Send" size={12} />
+            Сохранить и отправить
+          </button>
+          <button
+            onClick={() => {
+              setLink(initialLink)
+              setEditing(false)
+            }}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-black/10 hover:bg-black/5 text-[11px] uppercase tracking-[0.18em]"
+          >
+            Отмена
+          </button>
+        </>
+      )}
+    </li>
+  )
+}
+
 function RegistrationsTab() {
   const [allRegs, setAllRegs] = useState<RegistrationRow[]>([])
+  const [customEvents, setCustomEvents] = useState<CustomEvent[]>([])
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending_admin" | "deposit">("all")
   const [roleFilter, setRoleFilter] = useState<"all" | "member" | "resident" | "blogger" | "team">("all")
   const [search, setSearch] = useState("")
@@ -962,11 +1113,91 @@ function RegistrationsTab() {
     } catch {
       setAllRegs([])
     }
+    setCustomEvents(readCustomEvents())
   }
 
   useEffect(() => {
     reload()
   }, [])
+
+  // Группировка заявок по мероприятиям для быстрых действий
+  const eventGroups = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        title: string
+        date: string
+        groupLink?: string
+        recipients: RegistrationRow[]
+      }
+    >()
+    allRegs.forEach((r) => {
+      const key = r.eventTitle
+      if (!map.has(key)) {
+        const ce = customEvents.find((c) => c.title === r.eventTitle)
+        const ev = EVENTS.find((c) => c.title === r.eventTitle)
+        map.set(key, {
+          title: r.eventTitle,
+          date: r.date,
+          groupLink: ce?.groupLink || ev?.groupLink,
+          recipients: [],
+        })
+      }
+      map.get(key)!.recipients.push(r)
+    })
+    return [...map.values()].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    )
+  }, [allRegs, customEvents])
+
+  const sendGroupLinkFor = (eventTitle: string, eventDate: string, link: string) => {
+    const trimmed = link.trim()
+    if (!trimmed) {
+      toast.error("Укажи ссылку на Telegram-группу")
+      return
+    }
+    const recipients = allRegs.filter((r) => r.eventTitle === eventTitle)
+    if (recipients.length === 0) {
+      toast.error("Нет получателей")
+      return
+    }
+    let sent = 0
+    recipients.forEach((r) => {
+      try {
+        const inboxKey = `mojno_user_inbox_${r.email}`
+        const inboxRaw = localStorage.getItem(inboxKey)
+        const inbox = inboxRaw ? JSON.parse(inboxRaw) : []
+        const note = {
+          id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          title: `Ссылка на группу · ${eventTitle}`,
+          description: `Закрытая Telegram-группа мероприятия «${eventTitle}» (${formatDate(eventDate)}): ${trimmed}`,
+          createdAt: new Date().toISOString(),
+          read: false,
+          eventTitle,
+          eventDate,
+          link: trimmed,
+        }
+        localStorage.setItem(inboxKey, JSON.stringify([note, ...inbox]))
+        sent++
+      } catch {
+        /* ignore */
+      }
+    })
+
+    // Сохраним ссылку в кастомное мероприятие, если оно наше
+    const ceIdx = customEvents.findIndex((c) => c.title === eventTitle)
+    if (ceIdx >= 0 && customEvents[ceIdx].groupLink !== trimmed) {
+      const next = [...customEvents]
+      next[ceIdx] = { ...next[ceIdx], groupLink: trimmed }
+      writeCustomEvents(next)
+      setCustomEvents(next)
+    }
+
+    toast.success(
+      `Ссылка отправлена · ${sent} ${sent === 1 ? "получатель" : "получателей"}`,
+      { description: "Появится в их уведомлениях." }
+    )
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -1088,6 +1319,28 @@ function RegistrationsTab() {
           label="Сумма доплат"
         />
       </div>
+
+      {/* Быстрые действия — рассылка ссылки на группу */}
+      {eventGroups.length > 0 && (
+        <Panel title="Быстрые действия · ссылки на Telegram-группы" icon="Send">
+          <ul className="divide-y divide-black/5">
+            {eventGroups.map((g) => (
+              <SendGroupLinkRow
+                key={g.title}
+                title={g.title}
+                date={g.date}
+                count={g.recipients.length}
+                initialLink={g.groupLink || ""}
+                onSend={(link) => sendGroupLinkFor(g.title, g.date, link)}
+              />
+            ))}
+          </ul>
+          <div className="text-xs text-black/45 px-2 pt-2">
+            Ссылка отправляется всем записанным на мероприятие — попадает в их личные
+            уведомления при следующем входе.
+          </div>
+        </Panel>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-black/5 p-4 space-y-3">
@@ -1244,6 +1497,7 @@ function EventForm({
     initial?.capacity ? String(initial.capacity) : ""
   )
   const [speaker, setSpeaker] = useState(initial?.speaker || "")
+  const [groupLink, setGroupLink] = useState(initial?.groupLink || "")
   const [description, setDescription] = useState(initial?.description || "")
 
   const submit = (e: React.FormEvent) => {
@@ -1262,6 +1516,7 @@ function EventForm({
       price: Number(price) || 0,
       capacity: Number(capacity) > 0 ? Number(capacity) : undefined,
       speaker: speaker || undefined,
+      groupLink: groupLink.trim() || undefined,
       description,
     }
     onSave(item)
@@ -1348,6 +1603,22 @@ function EventForm({
           <div className="space-y-1">
             <Label>Спикер</Label>
             <Input value={speaker} onChange={(e) => setSpeaker(e.target.value)} />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="flex items-center gap-1.5">
+              <Icon name="Send" size={13} className="text-sky-500" />
+              Ссылка на Telegram-группу
+              <span className="text-black/40 text-[11px] font-normal">
+                — отправляется участницам за день
+              </span>
+            </Label>
+            <Input
+              type="url"
+              value={groupLink}
+              onChange={(e) => setGroupLink(e.target.value)}
+              placeholder="https://t.me/+..."
+            />
           </div>
 
           <div className="space-y-1">

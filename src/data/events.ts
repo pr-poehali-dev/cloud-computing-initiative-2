@@ -17,6 +17,7 @@ export interface ClubEvent {
   price: number
   speaker?: string
   capacity?: number
+  groupLink?: string
 }
 
 export const CATEGORIES: { name: EventCategory; icon: string; color: string }[] = [

@@ -95,12 +95,17 @@ export default function EventsModal({ open, onOpenChange }: Props) {
   const [reminder, setReminder] = useState("1d")
   const [comment, setComment] = useState("")
 
-  // Префилл из профиля (если есть телега)
+  // Автозаполнение всех известных полей из профиля при открытии формы записи
   useEffect(() => {
-    if (view === "register" && user?.telegram && !regTelegram) {
-      setRegTelegram(user.telegram)
-    }
-  }, [view, user, regTelegram])
+    if (view !== "register" || !user) return
+    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim()
+    if (!regName && fullName) setRegName(fullName)
+    if (!regContact && user.phone) setRegContact(user.phone)
+    if (!regTelegram && user.telegram) setRegTelegram(user.telegram)
+    if (!notifyEmail && user.email) setNotifyEmail(user.email)
+    if (!notifyPhone && user.phone) setNotifyPhone(user.phone)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, user])
 
   const allEvents = useMemo(() => [...customEvents, ...EVENTS], [customEvents])
 
@@ -431,6 +436,12 @@ export default function EventsModal({ open, onOpenChange }: Props) {
             </div>
 
             <form onSubmit={handlePay} className="space-y-5 pt-4">
+              {user && (
+                <div className="rounded-xl bg-pink-50 border border-pink-100 px-3 py-2 flex items-center gap-2 text-xs text-black/70">
+                  <Icon name="Sparkles" size={13} className="text-pink-500 flex-shrink-0" />
+                  Поля заполнены данными из твоего профиля — проверь и при необходимости поправь.
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="regName">Имя</Label>
