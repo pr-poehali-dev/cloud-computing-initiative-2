@@ -1025,6 +1025,7 @@ function ResidentRequestRow({
 }
 
 function EventsTab() {
+  const { categories } = useCategories()
   const [customEvents, setCustomEvents] = useState<CustomEvent[]>([])
   const [editing, setEditing] = useState<CustomEvent | null>(null)
   const [creating, setCreating] = useState(false)
@@ -1032,6 +1033,23 @@ function EventsTab() {
   const [allRegs, setAllRegs] = useState<RegistrationRow[]>([])
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
   const [hiddenBase, setHiddenBase] = useState<string[]>([])
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
+
+  const categoryMeta = (name: string) =>
+    categories.find((c) => c.name === name) || {
+      name,
+      icon: "CalendarDays",
+      color: "from-pink-400 to-rose-500",
+    }
+
+  const toggleCategory = (name: string) => {
+    setCollapsedCats((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }
 
   const reloadRegs = () => {
     try {
@@ -1053,6 +1071,33 @@ function EventsTab() {
     () => EVENTS.filter((e) => !hiddenBase.includes(e.title)),
     [hiddenBase]
   )
+
+  // Объединяем все мероприятия (без деления на «базовые» и «команда добавила»)
+  // Кастомные — приоритет (это отредактированные / новые версии)
+  const allEvents = useMemo(() => {
+    const titles = new Set(customEvents.map((c) => c.title))
+    const baseAsCustom: (CustomEvent & { __isBase?: boolean })[] =
+      visibleBaseEvents
+        .filter((b) => !titles.has(b.title))
+        .map((b) => ({ ...b, id: `base:${b.title}`, __isBase: true }))
+    const merged: (CustomEvent & { __isBase?: boolean })[] = [
+      ...customEvents,
+      ...baseAsCustom,
+    ]
+    merged.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    return merged
+  }, [customEvents, visibleBaseEvents])
+
+  // Группировка по категориям
+  const eventsByCategory = useMemo(() => {
+    const map = new Map<string, (CustomEvent & { __isBase?: boolean })[]>()
+    allEvents.forEach((e) => {
+      const arr = map.get(e.category) || []
+      arr.push(e)
+      map.set(e.category, arr)
+    })
+    return map
+  }, [allEvents])
 
   const registrationsByTitle = useMemo(() => {
     const map = new Map<string, number>()
@@ -1382,152 +1427,169 @@ function EventsTab() {
         </Panel>
       )}
 
-      {customEvents.length > 0 && (
-        <Panel title="Команда добавила" icon="Star">
-          <ul className="divide-y divide-black/5">
-            {customEvents.map((e) => {
-              const isOpen = expandedEvent === e.title
-              const count = registrationsByTitle.get(e.title) || 0
-              return (
-                <li key={e.id} className="py-2.5">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => setExpandedEvent(isOpen ? null : e.title)}
-                      className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl hover:bg-black/[0.03] -mx-2 px-2 py-1 transition-colors"
-                    >
-                      <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 text-white flex-shrink-0">
-                        <Icon name="CalendarDays" size={14} />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate flex items-center gap-1.5">
-                          {e.title}
-                          <Icon
-                            name={isOpen ? "ChevronUp" : "ChevronDown"}
-                            size={14}
-                            className="text-black/40 flex-shrink-0"
-                          />
-                        </div>
-                        <div className="text-xs text-black/55">
-                          {formatDate(e.date)} · {e.time} · {e.location}
-                        </div>
-                      </div>
-                      <div className="text-xs text-black/55 flex-shrink-0">
-                        Записано: <b className="text-black/80">{count}</b>
-                        {e.capacity && e.capacity > 0 && (
-                          <span className="text-black/40"> / {e.capacity}</span>
-                        )}
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => sendGroupLink(e)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.18em] transition-colors ${
-                        e.groupLink
-                          ? "bg-sky-500 hover:bg-sky-600 text-white"
-                          : "border border-black/10 text-black/40 hover:bg-black/5"
-                      }`}
-                      title={
-                        e.groupLink
-                          ? "Отправить ссылку на Telegram-группу всем записанным"
-                          : "Сначала добавь ссылку на группу"
-                      }
-                    >
-                      <Icon name="Send" size={12} />
-                      Отправить ссылку
-                    </button>
-                    <button
-                      onClick={() => setEditing(e)}
-                      className="p-2 rounded-full hover:bg-black/5"
-                      title="Редактировать"
-                    >
-                      <Icon name="Pencil" size={14} />
-                    </button>
-                    <button
-                      onClick={() => remove(e.id)}
-                      className="p-2 rounded-full hover:bg-red-50 text-red-500"
-                      title="Удалить"
-                    >
-                      <Icon name="Trash2" size={14} />
-                    </button>
-                  </div>
-                  {isOpen && (
-                    <div className="mt-3 pl-12">{renderParticipants(e.title)}</div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </Panel>
-      )}
-
-      <Panel title="Базовые мероприятия" icon="CalendarDays">
-        {visibleBaseEvents.length === 0 ? (
-          <div className="rounded-xl bg-black/[0.02] border border-dashed border-black/10 px-4 py-6 text-center text-xs text-black/45">
-            Все базовые мероприятия скрыты
+      <Panel title={`Все мероприятия · ${allEvents.length}`} icon="CalendarDays">
+        {allEvents.length === 0 ? (
+          <div className="rounded-xl bg-black/[0.02] border border-dashed border-black/10 px-4 py-8 text-center text-xs text-black/45">
+            Мероприятий пока нет — нажми «Создать», чтобы добавить первое
           </div>
         ) : (
-          <ul className="divide-y divide-black/5">
-            {visibleBaseEvents.slice(0, 12).map((e, idx) => {
-              const isOpen = expandedEvent === e.title
-              const count = registrationsByTitle.get(e.title) || 0
-              return (
-                <li key={idx} className="py-2.5">
-                  <div className="flex items-center gap-3 flex-wrap">
+          <div className="space-y-3">
+            {[...eventsByCategory.entries()]
+              .sort((a, b) => a[0].localeCompare(b[0], "ru"))
+              .map(([catName, list]) => {
+                const meta = categoryMeta(catName)
+                const isCollapsed = collapsedCats.has(catName)
+                return (
+                  <div
+                    key={catName}
+                    className="rounded-2xl border border-black/5 overflow-hidden"
+                  >
                     <button
                       type="button"
-                      onClick={() => setExpandedEvent(isOpen ? null : e.title)}
-                      className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl hover:bg-black/[0.03] -mx-2 px-2 py-1 transition-colors"
+                      onClick={() => toggleCategory(catName)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 bg-black/[0.02] hover:bg-black/[0.04] transition-colors"
                     >
-                      <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-stone-100 text-stone-600 flex-shrink-0">
-                        <Icon name="CalendarDays" size={14} />
+                      <span
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br ${meta.color} text-white flex-shrink-0`}
+                      >
+                        <Icon name={meta.icon} size={13} />
                       </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate flex items-center gap-1.5">
-                          {e.title}
-                          <Icon
-                            name={isOpen ? "ChevronUp" : "ChevronDown"}
-                            size={14}
-                            className="text-black/40 flex-shrink-0"
-                          />
-                        </div>
-                        <div className="text-xs text-black/55">
-                          {formatDate(e.date)} · {e.time} · {e.location}
+                      <div className="flex-1 text-left">
+                        <div className="text-sm font-medium">{catName}</div>
+                        <div className="text-[11px] text-black/50">
+                          {list.length} {list.length === 1 ? "мероприятие" : "мероприятий"}
                         </div>
                       </div>
-                      <div className="text-xs text-black/55 flex-shrink-0">
-                        Записано: <b className="text-black/80">{count}</b>
-                      </div>
+                      <Icon
+                        name={isCollapsed ? "ChevronDown" : "ChevronUp"}
+                        size={14}
+                        className="text-black/40"
+                      />
                     </button>
-                    <button
-                      onClick={() => editBaseEvent(e)}
-                      className="p-2 rounded-full hover:bg-black/5"
-                      title="Редактировать"
-                    >
-                      <Icon name="Pencil" size={14} />
-                    </button>
-                    <button
-                      onClick={() => removeBaseEvent(e.title)}
-                      className="p-2 rounded-full hover:bg-red-50 text-red-500"
-                      title="Удалить"
-                    >
-                      <Icon name="Trash2" size={14} />
-                    </button>
+                    {!isCollapsed && (
+                      <ul className="divide-y divide-black/5">
+                        {list.map((e) => {
+                          const isOpen = expandedEvent === e.title
+                          const count = registrationsByTitle.get(e.title) || 0
+                          const onEditClick = () => {
+                            if (e.__isBase) {
+                              const orig = EVENTS.find((b) => b.title === e.title)
+                              if (orig) editBaseEvent(orig)
+                            } else {
+                              const ce = customEvents.find((c) => c.id === e.id)
+                              if (ce) setEditing(ce)
+                            }
+                          }
+                          const onRemoveClick = () => {
+                            if (e.__isBase) removeBaseEvent(e.title)
+                            else remove(e.id)
+                          }
+                          const sendIfCustom = () => {
+                            if (e.__isBase) {
+                              toast.error(
+                                "Сначала добавь ссылку на Telegram-группу — нажми редактировать"
+                              )
+                              return
+                            }
+                            const ce = customEvents.find((c) => c.id === e.id)
+                            if (ce) sendGroupLink(ce)
+                          }
+                          return (
+                            <li key={e.id} className="px-4 py-2.5">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedEvent(isOpen ? null : e.title)
+                                  }
+                                  className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl hover:bg-black/[0.03] -mx-2 px-2 py-1 transition-colors"
+                                >
+                                  {e.image ? (
+                                    <img
+                                      src={e.image}
+                                      alt={e.title}
+                                      className="w-10 h-10 rounded-xl object-cover border border-black/10 flex-shrink-0"
+                                    />
+                                  ) : (
+                                    <span
+                                      className={`inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br ${meta.color} text-white flex-shrink-0`}
+                                    >
+                                      <Icon name={meta.icon} size={14} />
+                                    </span>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium truncate flex items-center gap-1.5">
+                                      {e.title}
+                                      <Icon
+                                        name={isOpen ? "ChevronUp" : "ChevronDown"}
+                                        size={14}
+                                        className="text-black/40 flex-shrink-0"
+                                      />
+                                    </div>
+                                    <div className="text-xs text-black/55">
+                                      {formatDate(e.date)} · {e.time} · {e.location}
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-black/55 flex-shrink-0">
+                                    Записано: <b className="text-black/80">{count}</b>
+                                    {e.capacity && e.capacity > 0 && (
+                                      <span className="text-black/40">
+                                        {" "}
+                                        / {e.capacity}
+                                      </span>
+                                    )}
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={sendIfCustom}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.18em] transition-colors ${
+                                    !e.__isBase && e.groupLink
+                                      ? "bg-sky-500 hover:bg-sky-600 text-white"
+                                      : "border border-black/10 text-black/40 hover:bg-black/5"
+                                  }`}
+                                  title={
+                                    !e.__isBase && e.groupLink
+                                      ? "Отправить ссылку на Telegram-группу"
+                                      : "Сначала добавь ссылку через редактирование"
+                                  }
+                                >
+                                  <Icon name="Send" size={12} />
+                                  Отправить ссылку
+                                </button>
+                                <button
+                                  onClick={onEditClick}
+                                  className="p-2 rounded-full hover:bg-black/5"
+                                  title="Редактировать"
+                                >
+                                  <Icon name="Pencil" size={14} />
+                                </button>
+                                <button
+                                  onClick={onRemoveClick}
+                                  className="p-2 rounded-full hover:bg-red-50 text-red-500"
+                                  title="Удалить"
+                                >
+                                  <Icon name="Trash2" size={14} />
+                                </button>
+                              </div>
+                              {isOpen && (
+                                <div className="mt-3 pl-12">
+                                  {renderParticipants(e.title)}
+                                </div>
+                              )}
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
                   </div>
-                  {isOpen && (
-                    <div className="mt-3 pl-12">{renderParticipants(e.title)}</div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+                )
+              })}
+          </div>
         )}
-        <div className="text-xs text-black/45 px-2 pt-2">
-          Показано {Math.min(12, visibleBaseEvents.length)} из {visibleBaseEvents.length}
-        </div>
       </Panel>
 
       {hiddenBase.length > 0 && (
-        <Panel title={`Скрытые базовые · ${hiddenBase.length}`} icon="EyeOff">
+        <Panel title={`Скрытые мероприятия · ${hiddenBase.length}`} icon="EyeOff">
           <ul className="divide-y divide-black/5">
             {hiddenBase.map((title) => {
               const orig = EVENTS.find((e) => e.title === title)
@@ -1561,9 +1623,9 @@ function EventsTab() {
             })}
           </ul>
           <div className="text-xs text-black/45 px-2 pt-2">
-            Эти мероприятия не показываются участницам в календаре. Если базовое
-            мероприятие было отредактировано, оригинал скрыт, а новая версия
-            появилась в блоке «Команда добавила».
+            Эти мероприятия не показываются участницам в календаре. После
+            редактирования оригинал скрывается, а новая версия попадает в
+            общий список и доступна для дальнейших правок.
           </div>
         </Panel>
       )}
@@ -2283,6 +2345,44 @@ function EventForm({
   const [speaker, setSpeaker] = useState(initial?.speaker || "")
   const [groupLink, setGroupLink] = useState(initial?.groupLink || "")
   const [description, setDescription] = useState(initial?.description || "")
+  const [image, setImage] = useState<string | undefined>(initial?.image)
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith("image/")) {
+      toast.error("Подойдёт только изображение")
+      return
+    }
+    if (file.size > 1.5 * 1024 * 1024) {
+      toast.error("Слишком большой файл — выбери изображение до 1.5 МБ")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      // Сжимаем до квадрата 256 для иконки
+      const img = new Image()
+      img.onload = () => {
+        const size = 256
+        const canvas = document.createElement("canvas")
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          setImage(reader.result as string)
+          return
+        }
+        const minSide = Math.min(img.width, img.height)
+        const sx = (img.width - minSide) / 2
+        const sy = (img.height - minSide) / 2
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size)
+        setImage(canvas.toDataURL("image/jpeg", 0.85))
+      }
+      img.onerror = () => setImage(reader.result as string)
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  }
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -2302,6 +2402,7 @@ function EventForm({
       speaker: speaker || undefined,
       groupLink: groupLink.trim() || undefined,
       description,
+      image,
     }
     onSave(item)
   }
@@ -2315,6 +2416,52 @@ function EventForm({
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-3">
+          {/* Иконка-фото */}
+          <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5">
+              <Icon name="ImagePlus" size={13} className="text-pink-500" />
+              Иконка мероприятия (фото)
+              <span className="text-black/40 text-[11px] font-normal">
+                — необязательно, до 1.5 МБ
+              </span>
+            </Label>
+            <div className="flex items-center gap-3">
+              <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-gradient-to-br from-pink-100 to-rose-100 border border-pink-200 flex-shrink-0 flex items-center justify-center">
+                {image ? (
+                  <img
+                    src={image}
+                    alt="Иконка"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Icon name="ImageOff" size={22} className="text-pink-400/70" />
+                )}
+              </div>
+              <div className="flex-1 flex flex-col gap-1.5">
+                <label className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-pink-50 border border-pink-200 hover:bg-pink-100 text-pink-700 text-[11px] uppercase tracking-[0.18em] cursor-pointer">
+                  <Icon name="Upload" size={12} />
+                  {image ? "Заменить фото" : "Загрузить фото"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+                {image && (
+                  <button
+                    type="button"
+                    onClick={() => setImage(undefined)}
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full border border-black/10 hover:bg-black/5 text-black/55 text-[11px] uppercase tracking-[0.18em]"
+                  >
+                    <Icon name="X" size={12} />
+                    Убрать фото
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-1">
             <Label>Название*</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
@@ -2424,9 +2571,10 @@ function EventForm({
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 rounded-full bg-pink-600 text-white text-xs uppercase tracking-[0.2em] hover:bg-pink-700"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-pink-600 text-white text-xs uppercase tracking-[0.2em] hover:bg-pink-700"
             >
-              Сохранить
+              <Icon name={initial ? "Save" : "Plus"} size={13} />
+              {initial ? "Сохранить редактирование" : "Создать мероприятие"}
             </button>
           </div>
         </form>
