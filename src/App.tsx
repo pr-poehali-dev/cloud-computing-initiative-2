@@ -26,6 +26,8 @@ import { EventSuggestionsProvider } from "@/contexts/EventSuggestionsContext";
 import { CategoriesProvider } from "@/contexts/CategoriesContext";
 import { DirectoryProvider } from "@/contexts/DirectoryContext";
 import Team from "./pages/Team";
+import PromoModal from "@/components/PromoModal";
+import ResidencyCountdown from "@/components/ResidencyCountdown";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +46,8 @@ const App = () => (
                   <TooltipProvider>
                     <Toaster />
                     <Sonner />
+                    <PromoModal />
+                    <ResidencyCountdown />
                     <BrowserRouter>
                       <Routes>
                         <Route path="/" element={<Index />} />

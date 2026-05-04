@@ -30,6 +30,8 @@ export interface User {
   role?: UserRole
   teamPosition?: string
   notes?: string
+  residencyUntil?: string
+  previousRole?: UserRole
 }
 
 export const REFERRAL_BONUS = 100
@@ -86,6 +88,7 @@ interface AuthContextType {
     rows: Partial<User>[],
     opts?: { mode?: "merge" | "replace"; defaultPassword?: string }
   ) => { added: number; updated: number; skipped: number }
+  activatePromoResidency: (days: number) => { ok: boolean; until: string }
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -388,6 +391,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { added, updated, skipped }
   }
 
+  const activatePromoResidency: AuthContextType["activatePromoResidency"] = (
+    days
+  ) => {
+    const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+    if (!user) return { ok: false, until }
+    const prev = user.role || "member"
+    const patch: Partial<User> = {
+      role: "resident",
+      residencyUntil: until,
+      previousRole: prev === "resident" ? user.previousRole || "member" : prev,
+    }
+    updateUserByEmail(user.email, patch)
+    return { ok: true, until }
+  }
+
+  // Авто-возврат роли по истечении промо-резидентства
+  useEffect(() => {
+    if (!user) return
+    const check = () => {
+      if (!user.residencyUntil) return
+      const exp = new Date(user.residencyUntil).getTime()
+      if (Date.now() >= exp) {
+        const back = user.previousRole || "member"
+        updateUserByEmail(user.email, {
+          role: back,
+          residencyUntil: undefined,
+          previousRole: undefined,
+        })
+      }
+    }
+    check()
+    const t = setInterval(check, 60 * 1000)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email, user?.residencyUntil])
+
   return (
     <AuthContext.Provider
       value={{
@@ -403,6 +442,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         getAllUsers,
         updateUserByEmail,
         importUsers,
+        activatePromoResidency,
       }}
     >
       {children}
