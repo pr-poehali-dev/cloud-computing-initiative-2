@@ -40,6 +40,7 @@ type Tab =
   | "dashboard"
   | "members"
   | "events"
+  | "registrations"
   | "directory"
   | "requests"
   | "testimonials"
@@ -51,6 +52,7 @@ const TABS: { id: Tab; label: string; icon: string; description?: string }[] = [
   { id: "dashboard", label: "Дашборд", icon: "BarChart3", description: "Главные метрики и сводка" },
   { id: "members", label: "Участницы", icon: "Users", description: "База участниц клуба" },
   { id: "events", label: "Мероприятия", icon: "CalendarDays", description: "Расписание и категории" },
+  { id: "registrations", label: "Все заявки на мероприятия", icon: "ClipboardList", description: "История записей с фильтрами" },
   { id: "directory", label: "Каталог клуба", icon: "BookOpen", description: "Спикеры, резиденты, партнёры" },
   { id: "requests", label: "Заявки", icon: "Inbox", description: "Спикеры, партнёры, идеи" },
   { id: "testimonials", label: "Отзывы", icon: "MessageSquareQuote", description: "Модерация отзывов" },
@@ -191,6 +193,7 @@ export default function Team() {
           {tab === "dashboard" && <DashboardTab />}
           {tab === "members" && <MembersTab />}
           {tab === "events" && <EventsTab />}
+          {tab === "registrations" && <RegistrationsTab />}
           {tab === "directory" && <DirectoryTab />}
           {tab === "requests" && <RequestsTab />}
           {tab === "testimonials" && <TestimonialsTab />}
@@ -575,6 +578,7 @@ interface RegistrationRow {
   role?: string
   amount?: number
   surcharge?: number
+  telegram?: string
 }
 
 function ResidentRequestRow({
@@ -600,6 +604,17 @@ function ResidentRequestRow({
           <div className="text-xs text-black/55">
             {reg.email} · {formatDate(reg.date)} · {reg.category}
           </div>
+          {reg.telegram && (
+            <a
+              href={`https://t.me/${reg.telegram.replace(/^@/, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] text-sky-600 hover:text-sky-700 mt-0.5"
+            >
+              <Icon name="Send" size={11} />
+              {reg.telegram}
+            </a>
+          )}
         </div>
         <span className="text-[10px] uppercase tracking-[0.18em] bg-amber-100 text-amber-700 border border-amber-200 rounded-full px-2 py-1">
           Ожидает
@@ -911,6 +926,297 @@ function EventsTab() {
           }}
           onSave={upsert}
         />
+      )}
+    </div>
+  )
+}
+
+/* ───────── All Registrations ───────── */
+
+const STATUS_FILTERS: { id: "all" | "paid" | "pending_admin" | "deposit"; label: string; color: string; icon: string }[] = [
+  { id: "all", label: "Все", color: "bg-black text-white", icon: "List" },
+  { id: "pending_admin", label: "Ожидают админа", color: "bg-amber-100 text-amber-700 border border-amber-200", icon: "Clock" },
+  { id: "paid", label: "Оплачено", color: "bg-emerald-100 text-emerald-700 border border-emerald-200", icon: "CheckCircle2" },
+  { id: "deposit", label: "С депозита", color: "bg-pink-100 text-pink-700 border border-pink-200", icon: "Wallet" },
+]
+
+const ROLE_FILTERS: { id: "all" | "member" | "resident" | "blogger" | "team"; label: string; icon: string }[] = [
+  { id: "all", label: "Все статусы", icon: "Users" },
+  { id: "member", label: "Участницы", icon: "Heart" },
+  { id: "resident", label: "Резиденты", icon: "Gem" },
+  { id: "blogger", label: "Блогеры", icon: "Camera" },
+  { id: "team", label: "Команда", icon: "Crown" },
+]
+
+function RegistrationsTab() {
+  const [allRegs, setAllRegs] = useState<RegistrationRow[]>([])
+  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending_admin" | "deposit">("all")
+  const [roleFilter, setRoleFilter] = useState<"all" | "member" | "resident" | "blogger" | "team">("all")
+  const [search, setSearch] = useState("")
+
+  const reload = () => {
+    try {
+      const raw = localStorage.getItem("mojno_event_registrations")
+      const arr = raw ? JSON.parse(raw) : []
+      setAllRegs(Array.isArray(arr) ? arr : [])
+    } catch {
+      setAllRegs([])
+    }
+  }
+
+  useEffect(() => {
+    reload()
+  }, [])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return [...allRegs]
+      .filter((r) => {
+        if (statusFilter !== "all" && r.status !== statusFilter) return false
+        if (roleFilter !== "all" && (r.role || "member") !== roleFilter) return false
+        if (q) {
+          const hay = `${r.eventTitle} ${r.email} ${r.category}`.toLowerCase()
+          if (!hay.includes(q)) return false
+        }
+        return true
+      })
+      .sort((a, b) => new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime())
+  }, [allRegs, statusFilter, roleFilter, search])
+
+  const counts = useMemo(() => {
+    const total = allRegs.length
+    const pending = allRegs.filter((r) => r.status === "pending_admin").length
+    const paid = allRegs.filter((r) => r.status === "paid").length
+    const deposit = allRegs.filter((r) => r.status === "deposit").length
+    const surchargeSum = allRegs.reduce((s, r) => s + (r.surcharge || 0), 0)
+    return { total, pending, paid, deposit, surchargeSum }
+  }, [allRegs])
+
+  const removeReg = (target: RegistrationRow) => {
+    if (!window.confirm("Удалить заявку?")) return
+    const next = allRegs.filter(
+      (r) => !(r.email === target.email && r.eventTitle === target.eventTitle && r.registeredAt === target.registeredAt)
+    )
+    setAllRegs(next)
+    localStorage.setItem("mojno_event_registrations", JSON.stringify(next))
+    toast.success("Заявка удалена")
+  }
+
+  const exportCsv = () => {
+    if (filtered.length === 0) {
+      toast.error("Нет данных для экспорта")
+      return
+    }
+    const rows = [
+      ["Дата записи", "Email", "Telegram", "Роль", "Мероприятие", "Категория", "Дата мероприятия", "Статус", "Сумма", "Доплата"],
+      ...filtered.map((r) => [
+        new Date(r.registeredAt).toLocaleString("ru-RU"),
+        r.email,
+        r.telegram || "",
+        r.role || "member",
+        r.eventTitle,
+        r.category,
+        r.date,
+        r.status || "",
+        String(r.amount ?? ""),
+        String(r.surcharge ?? ""),
+      ]),
+    ]
+    const csv = rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n")
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `registrations-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("Файл выгружен")
+  }
+
+  const roleBadge = (role?: string) => {
+    const r = role || "member"
+    if (r === "team") return { icon: "Crown", color: "from-amber-400 via-pink-500 to-fuchsia-500", label: "Команда" }
+    if (r === "blogger") return { icon: "Camera", color: "from-amber-400 via-pink-500 to-fuchsia-500", label: "Блогер" }
+    if (r === "resident") return { icon: "Gem", color: "from-fuchsia-500 to-purple-600", label: "Резидент" }
+    return { icon: "Heart", color: "from-pink-400 to-rose-500", label: "Участница" }
+  }
+
+  const statusMeta = (s?: string) => {
+    if (s === "pending_admin") return { label: "Ожидает админа", className: "bg-amber-100 text-amber-700 border-amber-200" }
+    if (s === "paid") return { label: "Оплачено", className: "bg-emerald-100 text-emerald-700 border-emerald-200" }
+    if (s === "deposit") return { label: "С депозита", className: "bg-pink-100 text-pink-700 border-pink-200" }
+    return { label: "—", className: "bg-stone-100 text-stone-600 border-stone-200" }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-black/5 p-4 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-xl" style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}>
+            Все заявки на мероприятия
+          </h2>
+          <p className="text-xs text-black/55 mt-0.5">
+            История записей участниц, резидентов, блогеров и команды
+          </p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={reload}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-black/10 hover:bg-black/5 text-xs uppercase tracking-[0.2em]"
+          >
+            <Icon name="RefreshCw" size={14} />
+            Обновить
+          </button>
+          <button
+            onClick={exportCsv}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white text-xs uppercase tracking-[0.2em]"
+          >
+            <Icon name="Download" size={14} />
+            Экспорт CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <MetricCard icon="ClipboardList" value={counts.total} label="Всего заявок" />
+        <MetricCard icon="Clock" value={counts.pending} label="Ожидают админа" />
+        <MetricCard icon="CheckCircle2" value={counts.paid} label="Подтверждено" />
+        <MetricCard
+          icon="Wallet"
+          value={`${counts.surchargeSum.toLocaleString("ru-RU")} ₽`}
+          label="Сумма доплат"
+        />
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-2xl border border-black/5 p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Icon name="Search" size={16} className="text-black/40" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по email, мероприятию или категории"
+            className="h-9"
+          />
+        </div>
+
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-black/50 mb-1.5">Статус</div>
+          <div className="flex flex-wrap gap-2">
+            {STATUS_FILTERS.map((f) => {
+              const active = statusFilter === f.id
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setStatusFilter(f.id)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.18em] transition-all ${
+                    active ? f.color + " shadow-sm" : "bg-white border border-black/10 text-black/65 hover:border-black/30"
+                  }`}
+                >
+                  <Icon name={f.icon} size={12} />
+                  {f.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.18em] text-black/50 mb-1.5">Тип пользователя</div>
+          <div className="flex flex-wrap gap-2">
+            {ROLE_FILTERS.map((f) => {
+              const active = roleFilter === f.id
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setRoleFilter(f.id)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.18em] transition-all ${
+                    active
+                      ? "bg-black text-white shadow-sm"
+                      : "bg-white border border-black/10 text-black/65 hover:border-black/30"
+                  }`}
+                >
+                  <Icon name={f.icon} size={12} />
+                  {f.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* List */}
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-black/5 p-10 text-center text-black/55">
+          <Icon name="Inbox" size={32} className="mx-auto text-black/20 mb-2" />
+          <div className="text-sm">Заявок по выбранным фильтрам нет</div>
+        </div>
+      ) : (
+        <Panel title={`Найдено: ${filtered.length}`} icon="ClipboardList">
+          <ul className="divide-y divide-black/5">
+            {filtered.map((r) => {
+              const rb = roleBadge(r.role)
+              const sm = statusMeta(r.status)
+              return (
+                <li
+                  key={`${r.email}-${r.registeredAt}-${r.eventTitle}`}
+                  className="py-3 flex items-start gap-3 flex-wrap"
+                >
+                  <span
+                    className={`inline-flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br ${rb.color} text-white flex-shrink-0`}
+                    title={rb.label}
+                  >
+                    <Icon name={rb.icon} size={14} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="text-sm font-medium truncate">{r.eventTitle}</div>
+                      <span
+                        className={`text-[10px] uppercase tracking-[0.18em] rounded-full px-2 py-0.5 border ${sm.className}`}
+                      >
+                        {sm.label}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-[0.18em] rounded-full px-2 py-0.5 bg-black/5 text-black/65">
+                        {rb.label}
+                      </span>
+                    </div>
+                    <div className="text-xs text-black/55 mt-0.5">
+                      {r.email} · {r.category} · {formatDate(r.date)}
+                    </div>
+                    {r.telegram && (
+                      <a
+                        href={`https://t.me/${r.telegram.replace(/^@/, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-sky-600 hover:text-sky-700 mt-0.5"
+                      >
+                        <Icon name="Send" size={11} />
+                        {r.telegram}
+                      </a>
+                    )}
+                    <div className="text-[11px] text-black/45 mt-0.5">
+                      Записан: {formatDateTime(r.registeredAt)}
+                      {typeof r.amount === "number" && r.amount > 0 && (
+                        <> · Сумма: {r.amount.toLocaleString("ru-RU")} ₽</>
+                      )}
+                      {typeof r.surcharge === "number" && r.surcharge > 0 && (
+                        <> · Доплата: {r.surcharge.toLocaleString("ru-RU")} ₽</>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeReg(r)}
+                    className="p-2 rounded-full hover:bg-red-50 text-red-500 flex-shrink-0"
+                    title="Удалить"
+                  >
+                    <Icon name="Trash2" size={14} />
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </Panel>
       )}
     </div>
   )

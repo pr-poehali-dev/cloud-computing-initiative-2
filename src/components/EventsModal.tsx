@@ -45,6 +45,7 @@ interface StoredRegistration {
   status: "paid" | "pending_admin" | "deposit"
   role?: string
   amount?: number
+  telegram?: string
 }
 
 const readCustomEvents = (): ClubEvent[] => {
@@ -87,11 +88,19 @@ export default function EventsModal({ open, onOpenChange }: Props) {
   // Registration form state
   const [regName, setRegName] = useState("")
   const [regContact, setRegContact] = useState("")
+  const [regTelegram, setRegTelegram] = useState("")
   const [notifyMethod, setNotifyMethod] = useState<"email" | "phone">("email")
   const [notifyEmail, setNotifyEmail] = useState("")
   const [notifyPhone, setNotifyPhone] = useState("")
   const [reminder, setReminder] = useState("1d")
   const [comment, setComment] = useState("")
+
+  // Префилл из профиля (если есть телега)
+  useEffect(() => {
+    if (view === "register" && user?.telegram && !regTelegram) {
+      setRegTelegram(user.telegram)
+    }
+  }, [view, user, regTelegram])
 
   const allEvents = useMemo(() => [...customEvents, ...EVENTS], [customEvents])
 
@@ -140,6 +149,7 @@ export default function EventsModal({ open, onOpenChange }: Props) {
   const resetForm = () => {
     setRegName("")
     setRegContact("")
+    setRegTelegram("")
     setNotifyMethod("email")
     setNotifyEmail("")
     setNotifyPhone("")
@@ -152,6 +162,11 @@ export default function EventsModal({ open, onOpenChange }: Props) {
     if (!dayEvent) return
     if (isFull) {
       toast.error("Мест уже нет — свяжись с администратором.")
+      return
+    }
+    const tgClean = regTelegram.trim().replace(/^@/, "")
+    if (!tgClean) {
+      toast.error("Укажи Telegram — он нужен, чтобы добавить тебя в группу мероприятия")
       return
     }
     const reminderLabel = REMINDER_OPTIONS.find((r) => r.value === reminder)?.label
@@ -189,6 +204,7 @@ export default function EventsModal({ open, onOpenChange }: Props) {
           status,
           role,
           amount,
+          telegram: `@${tgClean}`,
         })
         localStorage.setItem(REGISTRATIONS_KEY, JSON.stringify(list))
         setRegistrations(list)
@@ -423,6 +439,28 @@ export default function EventsModal({ open, onOpenChange }: Props) {
                 <div className="space-y-1.5">
                   <Label htmlFor="regContact">Телефон для связи</Label>
                   <Input id="regContact" type="tel" required value={regContact} onChange={(e) => setRegContact(e.target.value)} placeholder="+7 (___) ___-__-__" />
+                </div>
+              </div>
+
+              {/* Telegram (обязательно) */}
+              <div className="space-y-1.5">
+                <Label htmlFor="regTg" className="flex items-center gap-1.5">
+                  <Icon name="Send" size={13} className="text-sky-500" />
+                  Telegram*
+                </Label>
+                <Input
+                  id="regTg"
+                  required
+                  value={regTelegram}
+                  onChange={(e) => setRegTelegram(e.target.value)}
+                  placeholder="@username или https://t.me/username"
+                />
+                <div className="flex items-start gap-2 text-[11px] text-sky-700 bg-sky-50 border border-sky-200 rounded-xl px-3 py-2">
+                  <Icon name="Info" size={13} className="mt-0.5 flex-shrink-0" />
+                  <div>
+                    Telegram нужен обязательно — за день до мероприятия мы добавим тебя в
+                    закрытую группу события для общения, организационных деталей и фотоотчёта.
+                  </div>
                 </div>
               </div>
 
