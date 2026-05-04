@@ -25,6 +25,7 @@ import { TeamChatProvider } from "@/contexts/TeamChatContext";
 import { EventSuggestionsProvider } from "@/contexts/EventSuggestionsContext";
 import { CategoriesProvider } from "@/contexts/CategoriesContext";
 import { DirectoryProvider } from "@/contexts/DirectoryContext";
+import { PromotionsProvider } from "@/contexts/PromotionsContext";
 import Team from "./pages/Team";
 import PromoModal from "@/components/PromoModal";
 import ResidencyCountdown from "@/components/ResidencyCountdown";
@@ -43,6 +44,7 @@ const App = () => (
                   <EventSuggestionsProvider>
                   <CategoriesProvider>
                   <DirectoryProvider>
+                  <PromotionsProvider>
                   <TooltipProvider>
                     <Toaster />
                     <Sonner />
@@ -66,6 +68,7 @@ const App = () => (
                       </Routes>
                     </BrowserRouter>
                   </TooltipProvider>
+                  </PromotionsProvider>
                   </DirectoryProvider>
                   </CategoriesProvider>
                   </EventSuggestionsProvider>

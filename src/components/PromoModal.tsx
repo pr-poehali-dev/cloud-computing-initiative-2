@@ -8,37 +8,36 @@ import {
 } from "@/components/ui/dialog"
 import Icon from "@/components/ui/icon"
 import { useAuth } from "@/contexts/AuthContext"
+import { usePromotions } from "@/contexts/PromotionsContext"
 import { toast } from "sonner"
 
 const PROMO_KEY = "mojno_promo_residency_v1"
-const PROMO_DISMISSED_KEY = "mojno_promo_residency_dismissed_v1"
-const PROMO_PRICE = 3500
-const PROMO_DAYS = 7
+const PROMO_LOG_KEY = "mojno_promo_residency_log"
 
-interface PromoState {
-  // Когда участница в последний раз закрыла окно (чтобы не дёргать каждую минуту)
-  dismissedAt?: string
-  // Когда участница в последний раз увидела окно «продлить»
-  renewShownAt?: string
+export interface PromoLogEntry {
+  id: string
+  email: string
+  userName?: string
+  type: "purchase" | "renewal"
+  amount: number
+  days: number
+  activatedAt: string
+  expiresAt: string
+  promotionId?: string
+  promotionTitle?: string
 }
 
-const readPromoState = (email: string): PromoState => {
+const appendPromoLog = (entry: PromoLogEntry) => {
   try {
-    const raw = localStorage.getItem(`${PROMO_DISMISSED_KEY}_${email}`)
-    return raw ? (JSON.parse(raw) as PromoState) : {}
+    const raw = localStorage.getItem(PROMO_LOG_KEY)
+    const list: PromoLogEntry[] = raw ? JSON.parse(raw) : []
+    list.unshift(entry)
+    localStorage.setItem(PROMO_LOG_KEY, JSON.stringify(list))
   } catch {
-    return {}
+    /* ignore */
   }
 }
 
-const writePromoState = (email: string, state: PromoState) => {
-  localStorage.setItem(
-    `${PROMO_DISMISSED_KEY}_${email}`,
-    JSON.stringify(state)
-  )
-}
-
-// Считаем, что участница уже когда-то покупала промо-резидентство
 const hasUsedPromo = (email: string): boolean => {
   return localStorage.getItem(`${PROMO_KEY}_${email}_used`) === "1"
 }
@@ -49,57 +48,58 @@ const markPromoUsed = (email: string) => {
 export default function PromoModal() {
   const { user, isAuthenticated, activatePromoResidency, updateProfile } =
     useAuth()
+  const { activeResidencyPromo } = usePromotions()
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<"offer" | "renew">("offer")
+
+  // Настройки активной акции (или дефолт)
+  const PROMO_PRICE = activeResidencyPromo?.price ?? 3500
+  const PROMO_DAYS = activeResidencyPromo?.days ?? 7
+  const PROMO_OLD_PRICE = activeResidencyPromo?.oldPrice ?? 10000
+  const PROMO_TITLE =
+    activeResidencyPromo?.title || "Стань резидентом на 7 дней"
+  const PROMO_BADGE =
+    activeResidencyPromo?.badge || "Только эту неделю"
+  const PROMO_DESC =
+    activeResidencyPromo?.description ||
+    `Открой все привилегии резидента всего за ${PROMO_PRICE.toLocaleString("ru-RU")} ₽ — без подписки и обязательств.`
 
   const isResidentByPromo = useMemo(() => {
     if (!user?.residencyUntil) return false
     return new Date(user.residencyUntil).getTime() > Date.now()
   }, [user])
 
-  // Открытие окна при загрузке/обновлении страницы
+  // Открытие окна — каждый раз при загрузке/обновлении страницы,
+  // если участница не воспользовалась акцией
   useEffect(() => {
     if (!isAuthenticated || !user) {
       setOpen(false)
       return
     }
-    // Если участница уже резидент по обычной схеме (не через промо) — не показываем
+    // Постоянный резидент (не через промо) — не показываем
     const isPermanentResident = user.role === "resident" && !user.residencyUntil
     if (isPermanentResident) return
     // Команда — не показываем
     if (user.role === "team") return
-
-    const state = readPromoState(user.email)
-
-    // Если промо-резидентство активно — окно не показываем,
-    // только если оно недавно истекло (или прямо сейчас)
+    // Если промо-резидентство сейчас активно — окно не показываем
     if (isResidentByPromo) return
+    // Нет активной акции в системе — не показываем
+    if (!activeResidencyPromo) return
 
-    // Если у участницы есть «истёкший» residencyUntil (или promo был использован),
-    // показываем «Продлить»
-    const wasResident = hasUsedPromo(user.email) && !isResidentByPromo
-    const newMode: "offer" | "renew" = wasResident ? "renew" : "offer"
-
-    // Чтобы не показывать слишком навязчиво — закрытие действует 24 часа
-    const lastShownKey = newMode === "renew" ? state.renewShownAt : state.dismissedAt
-    if (lastShownKey) {
-      const last = new Date(lastShownKey).getTime()
-      if (Date.now() - last < 24 * 60 * 60 * 1000) return
-    }
-
-    setMode(newMode)
-    // Небольшая задержка, чтобы окно не «прыгало» сразу при загрузке
+    const wasResident = hasUsedPromo(user.email)
+    setMode(wasResident ? "renew" : "offer")
     const t = setTimeout(() => setOpen(true), 600)
     return () => clearTimeout(t)
-  }, [isAuthenticated, user?.email, isResidentByPromo])
+  }, [
+    isAuthenticated,
+    user?.email,
+    user?.role,
+    user?.residencyUntil,
+    isResidentByPromo,
+    activeResidencyPromo,
+  ])
 
   const handleClose = () => {
-    if (user) {
-      const state = readPromoState(user.email)
-      if (mode === "renew") state.renewShownAt = new Date().toISOString()
-      else state.dismissedAt = new Date().toISOString()
-      writePromoState(user.email, state)
-    }
     setOpen(false)
   }
 
@@ -116,11 +116,22 @@ export default function PromoModal() {
       )
       return
     }
-    // Списываем деньги
     updateProfile({ balance: balance - PROMO_PRICE })
-    // Активируем резидентство
     const { until } = activatePromoResidency(PROMO_DAYS)
+    const isRenewal = hasUsedPromo(user.email)
     markPromoUsed(user.email)
+    appendPromoLog({
+      id: `pl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      email: user.email,
+      userName: `${user.firstName} ${user.lastName}`.trim(),
+      type: isRenewal ? "renewal" : "purchase",
+      amount: PROMO_PRICE,
+      days: PROMO_DAYS,
+      activatedAt: new Date().toISOString(),
+      expiresAt: until,
+      promotionId: activeResidencyPromo?.id,
+      promotionTitle: activeResidencyPromo?.title,
+    })
     setOpen(false)
     toast.success(
       `Резидентство активировано на ${PROMO_DAYS} дней!`,
@@ -128,7 +139,6 @@ export default function PromoModal() {
         description: `Действует до ${new Date(until).toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}. Все привилегии резидента уже доступны.`,
       }
     )
-    // Уведомление в инбокс
     try {
       const inboxKey = `mojno_user_inbox_${user.email}`
       const inboxRaw = localStorage.getItem(inboxKey)
@@ -153,7 +163,7 @@ export default function PromoModal() {
       <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden">
         <div className="relative bg-gradient-to-br from-fuchsia-500 via-pink-500 to-rose-500 px-6 pt-7 pb-5 text-white">
           <span className="absolute top-3 right-3 text-[10px] uppercase tracking-[0.22em] bg-white/15 border border-white/30 rounded-full px-3 py-1">
-            Только эту неделю
+            {PROMO_BADGE}
           </span>
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/15 border border-white/30 mb-3">
             <Icon name="Gem" size={20} />
@@ -163,14 +173,12 @@ export default function PromoModal() {
               className="text-2xl text-white"
               style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
             >
-              {mode === "renew"
-                ? "Продлить резидентство?"
-                : "Стань резидентом на 7 дней"}
+              {mode === "renew" ? "Продлить резидентство?" : PROMO_TITLE}
             </DialogTitle>
             <DialogDescription className="text-white/85">
               {mode === "renew"
                 ? "Твоё промо-резидентство закончилось. Хочешь продлить ещё на неделю на тех же условиях?"
-                : "Открой все привилегии резидента всего за 3 500 ₽ — без подписки и обязательств."}
+                : PROMO_DESC}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -185,9 +193,11 @@ export default function PromoModal() {
                 <span className="text-3xl font-semibold">
                   {PROMO_PRICE.toLocaleString("ru-RU")} ₽
                 </span>
-                <span className="text-sm text-black/40 line-through">
-                  10 000 ₽
-                </span>
+                {PROMO_OLD_PRICE > PROMO_PRICE && (
+                  <span className="text-sm text-black/40 line-through">
+                    {PROMO_OLD_PRICE.toLocaleString("ru-RU")} ₽
+                  </span>
+                )}
               </div>
             </div>
             <div className="text-right">

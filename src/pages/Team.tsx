@@ -36,6 +36,11 @@ import {
 } from "@/contexts/DirectoryContext"
 import { EVENTS, type ClubEvent } from "@/data/events"
 import ImageCropper from "@/components/ImageCropper"
+import {
+  usePromotions,
+  type Promotion,
+  type PromotionKind,
+} from "@/contexts/PromotionsContext"
 
 type Tab =
   | "dashboard"
@@ -44,6 +49,7 @@ type Tab =
   | "registrations"
   | "directory"
   | "requests"
+  | "promotions"
   | "testimonials"
   | "news"
   | "broadcasts"
@@ -56,6 +62,7 @@ const TABS: { id: Tab; label: string; icon: string; description?: string }[] = [
   { id: "registrations", label: "Все заявки на мероприятия", icon: "ClipboardList", description: "История записей с фильтрами" },
   { id: "directory", label: "Каталог клуба", icon: "BookOpen", description: "Спикеры, резиденты, партнёры" },
   { id: "requests", label: "Заявки", icon: "Inbox", description: "Спикеры, партнёры, идеи" },
+  { id: "promotions", label: "Акции", icon: "Sparkles", description: "Управление акциями и журнал" },
   { id: "testimonials", label: "Отзывы", icon: "MessageSquareQuote", description: "Модерация отзывов" },
   { id: "news", label: "Новости", icon: "Newspaper", description: "Анонсы и публикации" },
   { id: "broadcasts", label: "Рассылки", icon: "Send", description: "Уведомления участницам" },
@@ -212,6 +219,7 @@ export default function Team() {
           {tab === "registrations" && <RegistrationsTab />}
           {tab === "directory" && <DirectoryTab />}
           {tab === "requests" && <RequestsTab />}
+          {tab === "promotions" && <PromotionsTab />}
           {tab === "testimonials" && <TestimonialsTab />}
           {tab === "news" && <NewsTab />}
           {tab === "broadcasts" && <BroadcastsTab />}
@@ -3056,6 +3064,619 @@ function EventForm({
           setCropSrc(null)
         }}
       />
+    </Dialog>
+  )
+}
+
+/* ───────── Promotions ───────── */
+
+interface PromoLogEntry {
+  id: string
+  email: string
+  userName?: string
+  type: "purchase" | "renewal"
+  amount: number
+  days: number
+  activatedAt: string
+  expiresAt: string
+  promotionId?: string
+  promotionTitle?: string
+}
+
+const readPromoLog = (): PromoLogEntry[] => {
+  try {
+    const raw = localStorage.getItem("mojno_promo_residency_log")
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function PromotionsTab() {
+  const {
+    promotions,
+    addPromotion,
+    updatePromotion,
+    deletePromotion,
+    togglePromotion,
+  } = usePromotions()
+  const [editing, setEditing] = useState<Promotion | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [log, setLog] = useState<PromoLogEntry[]>([])
+  const [logRefresh, setLogRefresh] = useState(0)
+
+  useEffect(() => {
+    setLog(readPromoLog())
+  }, [logRefresh])
+
+  const stats = useMemo(() => {
+    const totalRevenue = log.reduce((s, e) => s + e.amount, 0)
+    const purchases = log.filter((e) => e.type === "purchase").length
+    const renewals = log.filter((e) => e.type === "renewal").length
+    const activeNow = log.filter(
+      (e) => new Date(e.expiresAt).getTime() > Date.now()
+    ).length
+    const uniqueUsers = new Set(log.map((e) => e.email)).size
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const lastWeek = log.filter(
+      (e) => new Date(e.activatedAt).getTime() > weekAgo
+    ).length
+    return { totalRevenue, purchases, renewals, activeNow, uniqueUsers, lastWeek }
+  }, [log])
+
+  const promoStats = useMemo(() => {
+    // Стат по каждой акции
+    const map = new Map<
+      string,
+      { count: number; revenue: number; lastAt?: string }
+    >()
+    log.forEach((e) => {
+      const key = e.promotionId || "default"
+      const cur = map.get(key) || { count: 0, revenue: 0 }
+      cur.count++
+      cur.revenue += e.amount
+      if (!cur.lastAt || cur.lastAt < e.activatedAt) cur.lastAt = e.activatedAt
+      map.set(key, cur)
+    })
+    return map
+  }, [log])
+
+  const exportLogCsv = () => {
+    if (log.length === 0) {
+      toast.error("Журнал пуст")
+      return
+    }
+    const header = [
+      "Дата активации",
+      "Тип",
+      "Email",
+      "Имя",
+      "Акция",
+      "Сумма ₽",
+      "Дней",
+      "Действует до",
+    ]
+    const escape = (v: unknown) => {
+      const s = String(v ?? "")
+      return /[";,\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+    }
+    const rows = log.map((e) =>
+      [
+        new Date(e.activatedAt).toLocaleString("ru-RU"),
+        e.type === "purchase" ? "Покупка" : "Продление",
+        e.email,
+        e.userName || "",
+        e.promotionTitle || "—",
+        e.amount,
+        e.days,
+        new Date(e.expiresAt).toLocaleDateString("ru-RU"),
+      ]
+        .map(escape)
+        .join(";")
+    )
+    const csv = "\uFEFF" + [header.map(escape).join(";"), ...rows].join("\r\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `mojno-promo-log-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Экспортировано ${log.length} записей`)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-black/5 p-4 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2
+            className="text-xl"
+            style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+          >
+            Акции и предложения
+          </h2>
+          <p className="text-xs text-black/55 mt-0.5">
+            Управляй акциями и смотри журнал по каждой
+          </p>
+        </div>
+        <button
+          onClick={() => setCreating(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white text-xs uppercase tracking-[0.2em]"
+        >
+          <Icon name="Plus" size={14} />
+          Создать акцию
+        </button>
+      </div>
+
+      {/* Сводка */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <MetricCard
+          icon="Wallet"
+          value={`${stats.totalRevenue.toLocaleString("ru-RU")} ₽`}
+          label="Всего собрано"
+        />
+        <MetricCard
+          icon="ShoppingBag"
+          value={stats.purchases}
+          label="Покупок"
+          sublabel={`${stats.lastWeek} за 7 дней`}
+        />
+        <MetricCard icon="RotateCcw" value={stats.renewals} label="Продлений" />
+        <MetricCard
+          icon="Gem"
+          value={stats.activeNow}
+          label="Сейчас активны"
+          sublabel={`${stats.uniqueUsers} участниц`}
+        />
+      </div>
+
+      {/* Список акций */}
+      <Panel title={`Акции · ${promotions.length}`} icon="Sparkles">
+        {promotions.length === 0 ? (
+          <div className="rounded-xl bg-black/[0.02] border border-dashed border-black/10 px-4 py-8 text-center text-xs text-black/45">
+            Акций пока нет — нажми «Создать акцию»
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {promotions.map((p) => {
+              const ps = promoStats.get(p.id) || { count: 0, revenue: 0 }
+              const inWindow =
+                (!p.startsAt || new Date(p.startsAt).getTime() <= Date.now()) &&
+                (!p.endsAt || new Date(p.endsAt).getTime() >= Date.now())
+              return (
+                <li
+                  key={p.id}
+                  className={`rounded-2xl border p-4 transition-colors ${
+                    p.active && inWindow
+                      ? "border-pink-200 bg-gradient-to-br from-pink-50/60 to-white"
+                      : "border-black/10 bg-white"
+                  }`}
+                >
+                  <div className="flex items-start gap-3 flex-wrap">
+                    <span
+                      className={`inline-flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 ${
+                        p.active && inWindow
+                          ? "bg-gradient-to-br from-fuchsia-500 to-pink-600 text-white"
+                          : "bg-black/5 text-black/55"
+                      }`}
+                    >
+                      <Icon name="Sparkles" size={15} />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="text-sm font-medium">{p.title}</div>
+                        <span
+                          className={`text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${
+                            p.active && inWindow
+                              ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                              : !p.active
+                              ? "bg-stone-100 text-stone-600 border-stone-200"
+                              : "bg-amber-100 text-amber-700 border-amber-200"
+                          }`}
+                        >
+                          {!p.active
+                            ? "Выключена"
+                            : !inWindow
+                            ? "Вне периода"
+                            : "Активна"}
+                        </span>
+                        {p.kind === "residency_week" && (
+                          <span className="text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200">
+                            Резидентство
+                          </span>
+                        )}
+                      </div>
+                      {p.description && (
+                        <div className="text-xs text-black/55 mt-1">
+                          {p.description}
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-black/55 mt-2">
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name="Wallet" size={11} />
+                          {p.price.toLocaleString("ru-RU")} ₽
+                          {p.oldPrice && p.oldPrice > p.price && (
+                            <span className="text-black/35 line-through">
+                              {" "}
+                              {p.oldPrice.toLocaleString("ru-RU")} ₽
+                            </span>
+                          )}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name="Calendar" size={11} />
+                          {p.days} {p.days === 1 ? "день" : "дней"}
+                        </span>
+                        {p.startsAt && (
+                          <span className="inline-flex items-center gap-1">
+                            <Icon name="PlayCircle" size={11} />
+                            с {formatDate(p.startsAt)}
+                          </span>
+                        )}
+                        {p.endsAt && (
+                          <span className="inline-flex items-center gap-1">
+                            <Icon name="StopCircle" size={11} />
+                            до {formatDate(p.endsAt)}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 text-pink-600">
+                          <Icon name="ShoppingBag" size={11} />
+                          {ps.count} покупок · {ps.revenue.toLocaleString("ru-RU")} ₽
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={() => togglePromotion(p.id)}
+                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] uppercase tracking-[0.18em] transition-colors ${
+                          p.active
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : "border border-black/15 text-black/65 hover:bg-black/5"
+                        }`}
+                      >
+                        <Icon name={p.active ? "ToggleRight" : "ToggleLeft"} size={11} />
+                        {p.active ? "Включена" : "Включить"}
+                      </button>
+                      <button
+                        onClick={() => setEditing(p)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-black/10 hover:bg-black/5 text-[10px] uppercase tracking-[0.18em]"
+                      >
+                        <Icon name="Pencil" size={11} />
+                        Изменить
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm("Удалить акцию?"))
+                            deletePromotion(p.id)
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full hover:bg-red-50 text-red-500 text-[10px] uppercase tracking-[0.18em]"
+                      >
+                        <Icon name="Trash2" size={11} />
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </Panel>
+
+      {/* Журнал по промо-резидентству */}
+      <Panel
+        title={`Журнал · промо-резидентство · ${log.length}`}
+        icon="ScrollText"
+      >
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div className="text-xs text-black/55">
+            Каждая запись — покупка или продление участницей
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setLogRefresh((x) => x + 1)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/10 hover:bg-black/5 text-[11px] uppercase tracking-[0.18em]"
+            >
+              <Icon name="RefreshCw" size={11} />
+              Обновить
+            </button>
+            <button
+              onClick={exportLogCsv}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black hover:bg-black/85 text-white text-[11px] uppercase tracking-[0.18em]"
+            >
+              <Icon name="Download" size={11} />
+              Скачать CSV
+            </button>
+          </div>
+        </div>
+        {log.length === 0 ? (
+          <div className="rounded-xl bg-black/[0.02] border border-dashed border-black/10 px-4 py-8 text-center text-xs text-black/45">
+            Никто ещё не покупал акцию
+          </div>
+        ) : (
+          <ul className="divide-y divide-black/5">
+            {log.map((e) => {
+              const expired = new Date(e.expiresAt).getTime() < Date.now()
+              return (
+                <li
+                  key={e.id}
+                  className="py-2.5 flex items-center gap-3 flex-wrap"
+                >
+                  <span
+                    className={`inline-flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0 ${
+                      e.type === "renewal"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-emerald-100 text-emerald-700"
+                    }`}
+                  >
+                    <Icon
+                      name={e.type === "renewal" ? "RotateCcw" : "ShoppingBag"}
+                      size={14}
+                    />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">
+                      {e.userName || e.email}
+                      {e.userName && (
+                        <span className="text-xs text-black/45 font-normal ml-1.5">
+                          · {e.email}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-black/55">
+                      {e.type === "renewal" ? "Продлила" : "Купила"} ·{" "}
+                      {formatDateTime(e.activatedAt)} ·{" "}
+                      {e.amount.toLocaleString("ru-RU")} ₽ ·{" "}
+                      {e.promotionTitle || "Акция"}
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div
+                      className={`text-[10px] uppercase tracking-[0.18em] rounded-full px-2 py-0.5 border ${
+                        expired
+                          ? "bg-stone-100 text-stone-600 border-stone-200"
+                          : "bg-emerald-100 text-emerald-700 border-emerald-200"
+                      }`}
+                    >
+                      {expired ? "Истекло" : "Действует"}
+                    </div>
+                    <div className="text-[10px] text-black/45 mt-0.5">
+                      до {new Date(e.expiresAt).toLocaleDateString("ru-RU")}
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </Panel>
+
+      {(creating || editing) && (
+        <PromotionForm
+          initial={editing}
+          onCancel={() => {
+            setCreating(false)
+            setEditing(null)
+          }}
+          onSave={(data) => {
+            if (editing) {
+              updatePromotion(editing.id, data)
+              toast.success("Акция обновлена")
+            } else {
+              addPromotion(data)
+              toast.success("Акция создана")
+            }
+            setCreating(false)
+            setEditing(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function PromotionForm({
+  initial,
+  onCancel,
+  onSave,
+}: {
+  initial: Promotion | null
+  onCancel: () => void
+  onSave: (data: Omit<Promotion, "id" | "createdAt">) => void
+}) {
+  const [kind, setKind] = useState<PromotionKind>(
+    initial?.kind || "residency_week"
+  )
+  const [title, setTitle] = useState(initial?.title || "")
+  const [description, setDescription] = useState(initial?.description || "")
+  const [badge, setBadge] = useState(initial?.badge || "")
+  const [price, setPrice] = useState(String(initial?.price ?? ""))
+  const [oldPrice, setOldPrice] = useState(String(initial?.oldPrice ?? ""))
+  const [days, setDays] = useState(String(initial?.days ?? "7"))
+  const [startsAt, setStartsAt] = useState(initial?.startsAt?.slice(0, 10) || "")
+  const [endsAt, setEndsAt] = useState(initial?.endsAt?.slice(0, 10) || "")
+  const [active, setActive] = useState(initial?.active ?? true)
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) {
+      toast.error("Укажи название акции")
+      return
+    }
+    const numPrice = Number(price) || 0
+    const numDays = Number(days) || 0
+    if (numPrice <= 0) {
+      toast.error("Укажи цену больше нуля")
+      return
+    }
+    if (numDays <= 0) {
+      toast.error("Укажи длительность больше нуля")
+      return
+    }
+    onSave({
+      kind,
+      title: title.trim(),
+      description: description.trim() || undefined,
+      badge: badge.trim() || undefined,
+      price: numPrice,
+      oldPrice: Number(oldPrice) || undefined,
+      days: numDays,
+      startsAt: startsAt ? new Date(startsAt).toISOString() : undefined,
+      endsAt: endsAt
+        ? new Date(`${endsAt}T23:59:59`).toISOString()
+        : undefined,
+      active,
+    })
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent className="sm:max-w-[560px] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-black/5 flex-shrink-0">
+          <DialogTitle className="text-base">
+            {initial ? "Редактировать акцию" : "Новая акция"}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Настройки появятся в окне акции у участниц
+          </DialogDescription>
+        </DialogHeader>
+
+        <form
+          onSubmit={submit}
+          className="flex flex-col flex-1 min-h-0 overflow-hidden"
+        >
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+            <div className="space-y-1">
+              <Label>Тип акции</Label>
+              <select
+                value={kind}
+                onChange={(e) => setKind(e.target.value as PromotionKind)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="residency_week">Промо-резидентство</option>
+                <option value="discount">Скидка</option>
+                <option value="bonus">Бонусы</option>
+                <option value="custom">Другое</option>
+              </select>
+              {kind === "residency_week" && (
+                <div className="text-[11px] text-pink-600 mt-1">
+                  При покупке участница получает статус резидента на N дней.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label>Название*</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Стань резидентом на 7 дней"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Описание</Label>
+              <Textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Открой все привилегии резидента всего за 3 500 ₽"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Бейдж (короткий заголовок над названием)</Label>
+              <Input
+                value={badge}
+                onChange={(e) => setBadge(e.target.value)}
+                placeholder="Только эту неделю"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label>Цена, ₽*</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Старая цена</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={oldPrice}
+                  onChange={(e) => setOldPrice(e.target.value)}
+                  placeholder="—"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Дней*</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={days}
+                  onChange={(e) => setDays(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Старт</Label>
+                <Input
+                  type="date"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Окончание</Label>
+                <Input
+                  type="date"
+                  value={endsAt}
+                  onChange={(e) => setEndsAt(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+                className="w-4 h-4 accent-pink-600"
+              />
+              <span className="text-sm">Активная</span>
+              <span className="text-[11px] text-black/45">
+                — участницам показывается окно акции
+              </span>
+            </label>
+          </div>
+
+          <div className="flex gap-2 px-6 py-3 border-t border-black/5 bg-white flex-shrink-0">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 px-4 py-2.5 rounded-full border border-black/15 text-xs uppercase tracking-[0.2em] hover:bg-black/5"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-pink-600 text-white text-xs uppercase tracking-[0.2em] hover:bg-pink-700"
+            >
+              <Icon name={initial ? "Save" : "Plus"} size={13} />
+              {initial ? "Сохранить" : "Создать акцию"}
+            </button>
+          </div>
+        </form>
+      </DialogContent>
     </Dialog>
   )
 }
