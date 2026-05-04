@@ -348,13 +348,82 @@ function DashboardTab() {
 
 /* ───────── Members ───────── */
 
+type MemberRoleFilter = "all" | "member" | "resident" | "blogger" | "team"
+
+const MEMBER_ROLE_META: Record<
+  Exclude<MemberRoleFilter, "all">,
+  {
+    label: string
+    icon: string
+    chip: string
+    row: string
+    accent: string
+    dot: string
+  }
+> = {
+  team: {
+    label: "Команда",
+    icon: "Crown",
+    chip: "bg-gradient-to-r from-amber-400 via-pink-500 to-fuchsia-500 text-white border-transparent",
+    row: "bg-gradient-to-r from-amber-50/80 via-pink-50/70 to-fuchsia-50/80 hover:from-amber-50 hover:via-pink-50 hover:to-fuchsia-50",
+    accent: "border-l-4 border-l-pink-500",
+    dot: "bg-pink-500",
+  },
+  blogger: {
+    label: "Блогер",
+    icon: "Camera",
+    chip: "bg-pink-100 text-pink-700 border-pink-200",
+    row: "bg-pink-50/40 hover:bg-pink-50/70",
+    accent: "border-l-4 border-l-pink-400",
+    dot: "bg-pink-400",
+  },
+  resident: {
+    label: "Резидент",
+    icon: "Gem",
+    chip: "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
+    row: "bg-fuchsia-50/40 hover:bg-fuchsia-50/70",
+    accent: "border-l-4 border-l-fuchsia-500",
+    dot: "bg-fuchsia-500",
+  },
+  member: {
+    label: "Участница",
+    icon: "Heart",
+    chip: "bg-rose-50 text-rose-600 border-rose-100",
+    row: "bg-white hover:bg-black/[0.02]",
+    accent: "border-l-4 border-l-rose-300",
+    dot: "bg-rose-300",
+  },
+}
+
+const MEMBER_ROLE_ORDER: Exclude<MemberRoleFilter, "all">[] = [
+  "team",
+  "resident",
+  "blogger",
+  "member",
+]
+
 function MembersTab() {
   const { getAllUsers, updateUserByEmail } = useAuth()
   const [refresh, setRefresh] = useState(0)
   const users = useMemo(() => getAllUsers(), [getAllUsers, refresh])
   const [search, setSearch] = useState("")
-  const [filter, setFilter] = useState<"all" | "member" | "team">("all")
+  const [filter, setFilter] = useState<MemberRoleFilter>("all")
+  const [groupByRole, setGroupByRole] = useState(true)
   const [selected, setSelected] = useState<User | null>(null)
+
+  const counts = useMemo(() => {
+    const acc: Record<Exclude<MemberRoleFilter, "all">, number> = {
+      member: 0,
+      resident: 0,
+      blogger: 0,
+      team: 0,
+    }
+    users.forEach((u) => {
+      const r = (u.role || "member") as Exclude<MemberRoleFilter, "all">
+      if (acc[r] !== undefined) acc[r] += 1
+    })
+    return acc
+  }, [users])
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -369,10 +438,102 @@ function MembersTab() {
     })
   }, [users, search, filter])
 
+  const grouped = useMemo(() => {
+    const map: Record<Exclude<MemberRoleFilter, "all">, User[]> = {
+      team: [],
+      resident: [],
+      blogger: [],
+      member: [],
+    }
+    filtered.forEach((u) => {
+      const r = (u.role || "member") as Exclude<MemberRoleFilter, "all">
+      if (map[r]) map[r].push(u)
+    })
+    return map
+  }, [filtered])
+
   const triggerRefresh = () => setRefresh((x) => x + 1)
+
+  const FILTER_TABS: { id: MemberRoleFilter; label: string; icon: string; count: number; chip: string }[] = [
+    { id: "all", label: "Все", icon: "Users", count: users.length, chip: "" },
+    { id: "team", label: "Команда", icon: "Crown", count: counts.team, chip: MEMBER_ROLE_META.team.chip },
+    { id: "resident", label: "Резиденты", icon: "Gem", count: counts.resident, chip: MEMBER_ROLE_META.resident.chip },
+    { id: "blogger", label: "Блогеры", icon: "Camera", count: counts.blogger, chip: MEMBER_ROLE_META.blogger.chip },
+    { id: "member", label: "Участницы", icon: "Heart", count: counts.member, chip: MEMBER_ROLE_META.member.chip },
+  ]
+
+  const renderUserRow = (u: User) => {
+    const r = (u.role || "member") as Exclude<MemberRoleFilter, "all">
+    const meta = MEMBER_ROLE_META[r]
+    return (
+      <li
+        key={u.email}
+        onClick={() => setSelected(u)}
+        className={`px-4 py-3 flex items-center gap-3 cursor-pointer transition-colors ${meta.row} ${meta.accent}`}
+      >
+        <Avatar name={`${u.firstName} ${u.lastName}`} team={u.role === "team"} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="text-sm font-medium truncate">
+              {u.firstName} {u.lastName}
+            </div>
+            <span
+              className={`inline-flex items-center gap-1 text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${meta.chip}`}
+            >
+              <Icon name={meta.icon} size={10} />
+              {u.role === "team" ? u.teamPosition || meta.label : meta.label}
+            </span>
+          </div>
+          <div className="text-xs text-black/55 truncate">{u.email}</div>
+        </div>
+        <div className="hidden sm:block text-right">
+          <div className="text-sm font-medium">
+            {(u.balance || 0).toLocaleString("ru-RU")} ₽
+          </div>
+          <div className="text-[11px] text-pink-600">
+            {(u.points || 0).toLocaleString("ru-RU")} баллов
+          </div>
+        </div>
+        <Icon name="ChevronRight" size={16} className="text-black/30" />
+      </li>
+    )
+  }
 
   return (
     <div className="space-y-4">
+      {/* Метрики по ролям */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {MEMBER_ROLE_ORDER.map((r) => {
+          const meta = MEMBER_ROLE_META[r]
+          return (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setFilter(r)}
+              className={`text-left bg-white rounded-2xl border p-4 transition-all hover:-translate-y-0.5 ${
+                filter === r ? "border-black shadow-sm" : "border-black/5"
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <span
+                  className={`inline-flex items-center justify-center w-9 h-9 rounded-full border ${meta.chip}`}
+                >
+                  <Icon name={meta.icon} size={14} />
+                </span>
+                <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
+              </div>
+              <div className="text-2xl font-medium mt-3" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                {counts[r]}
+              </div>
+              <div className="text-[11px] uppercase tracking-[0.18em] text-black/55 mt-0.5">
+                {meta.label === "Команда" ? "Команда" : `${meta.label}ы`}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Поиск и фильтры */}
       <div className="bg-white rounded-2xl border border-black/5 p-4 flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[220px]">
           <Icon
@@ -387,61 +548,79 @@ function MembersTab() {
             className="pl-9"
           />
         </div>
-        <div className="flex gap-1 p-1 rounded-full bg-black/[0.04]">
-          {(["all", "member", "team"] as const).map((f) => (
+        <div className="flex gap-1 p-1 rounded-full bg-black/[0.04] flex-wrap">
+          {FILTER_TABS.map((f) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-full text-xs uppercase tracking-[0.18em] transition-colors ${
-                filter === f ? "bg-black text-white" : "text-black/60"
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs uppercase tracking-[0.18em] transition-colors ${
+                filter === f.id ? "bg-black text-white" : "text-black/60 hover:bg-white"
               }`}
             >
-              {f === "all" ? "Все" : f === "member" ? "Участницы" : "Команда"}
+              <Icon name={f.icon} size={12} />
+              {f.label}
+              <span
+                className={`text-[10px] rounded-full px-1.5 py-0.5 ${
+                  filter === f.id ? "bg-white/20" : "bg-black/[0.06] text-black/65"
+                }`}
+              >
+                {f.count}
+              </span>
             </button>
           ))}
         </div>
+        <button
+          onClick={() => setGroupByRole((v) => !v)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs uppercase tracking-[0.18em] transition-colors ${
+            groupByRole
+              ? "bg-black text-white border-black"
+              : "border-black/15 text-black/65 hover:bg-black/5"
+          }`}
+          title="Группировать по статусам"
+        >
+          <Icon name="LayoutList" size={12} />
+          По статусам
+        </button>
         <div className="text-xs text-black/55">Найдено: {filtered.length}</div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
-        {filtered.length === 0 ? (
+      {/* Список */}
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
           <Empty text="Никого не найдено" />
-        ) : (
-          <ul className="divide-y divide-black/5">
-            {filtered.map((u) => (
-              <li
-                key={u.email}
-                onClick={() => setSelected(u)}
-                className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-black/[0.02]"
+        </div>
+      ) : groupByRole && filter === "all" ? (
+        <div className="space-y-3">
+          {MEMBER_ROLE_ORDER.map((r) => {
+            const list = grouped[r]
+            if (list.length === 0) return null
+            const meta = MEMBER_ROLE_META[r]
+            return (
+              <div
+                key={r}
+                className="bg-white rounded-2xl border border-black/5 overflow-hidden"
               >
-                <Avatar name={`${u.firstName} ${u.lastName}`} team={u.role === "team"} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="text-sm font-medium truncate">
-                      {u.firstName} {u.lastName}
-                    </div>
-                    {u.role === "team" && (
-                      <span className="text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-pink-500 text-white">
-                        {u.teamPosition || "Команда"}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-black/55 truncate">{u.email}</div>
+                <div className="px-4 py-2.5 flex items-center gap-2 border-b border-black/5 bg-black/[0.015]">
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${meta.chip}`}
+                  >
+                    <Icon name={meta.icon} size={10} />
+                    {meta.label}
+                  </span>
+                  <span className="text-xs text-black/55">{list.length}</span>
                 </div>
-                <div className="hidden sm:block text-right">
-                  <div className="text-sm font-medium">
-                    {(u.balance || 0).toLocaleString("ru-RU")} ₽
-                  </div>
-                  <div className="text-[11px] text-black/45">
-                    Приглашено: {u.invitedCount || 0}
-                  </div>
-                </div>
-                <Icon name="ChevronRight" size={16} className="text-black/30" />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                <ul className="divide-y divide-black/5">
+                  {list.map(renderUserRow)}
+                </ul>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-black/5 overflow-hidden">
+          <ul className="divide-y divide-black/5">{filtered.map(renderUserRow)}</ul>
+        </div>
+      )}
 
       {selected && (
         <MemberDetailDialog
