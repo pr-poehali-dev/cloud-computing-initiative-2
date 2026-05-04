@@ -35,6 +35,7 @@ import {
   type TeamMember,
 } from "@/contexts/DirectoryContext"
 import { EVENTS, type ClubEvent } from "@/data/events"
+import ImageCropper from "@/components/ImageCropper"
 
 type Tab =
   | "dashboard"
@@ -418,13 +419,14 @@ const MEMBER_ROLE_ORDER: Exclude<MemberRoleFilter, "all">[] = [
 ]
 
 function MembersTab() {
-  const { getAllUsers, updateUserByEmail } = useAuth()
+  const { getAllUsers, updateUserByEmail, importUsers } = useAuth()
   const [refresh, setRefresh] = useState(0)
   const users = useMemo(() => getAllUsers(), [getAllUsers, refresh])
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<MemberRoleFilter>("all")
   const [groupByRole, setGroupByRole] = useState(true)
   const [selected, setSelected] = useState<User | null>(null)
+  const [dbOpen, setDbOpen] = useState(false)
 
   const counts = useMemo(() => {
     const acc: Record<Exclude<MemberRoleFilter, "all">, number> = {
@@ -516,6 +518,28 @@ function MembersTab() {
 
   return (
     <div className="space-y-4">
+      {/* Шапка вкладки с действиями */}
+      <div className="bg-white rounded-2xl border border-black/5 p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2
+            className="text-xl"
+            style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+          >
+            Участницы клуба
+          </h2>
+          <p className="text-xs text-black/55 mt-0.5">
+            {users.length} {users.length === 1 ? "запись" : "записей"} в базе
+          </p>
+        </div>
+        <button
+          onClick={() => setDbOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black text-white text-xs uppercase tracking-[0.2em] hover:bg-black/85"
+        >
+          <Icon name="Database" size={14} />
+          База данных
+        </button>
+      </div>
+
       {/* Метрики по ролям */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {MEMBER_ROLE_ORDER.map((r) => {
@@ -651,7 +675,445 @@ function MembersTab() {
           }}
         />
       )}
+
+      <UsersDatabaseDialog
+        open={dbOpen}
+        onClose={() => setDbOpen(false)}
+        users={users}
+        onImport={(rows, mode) => {
+          const result = importUsers(rows, { mode })
+          triggerRefresh()
+          toast.success(
+            `Импорт завершён · добавлено ${result.added}, обновлено ${result.updated}` +
+              (result.skipped ? `, пропущено ${result.skipped}` : "")
+          )
+        }}
+      />
     </div>
+  )
+}
+
+/* ───────── Users Database (импорт/экспорт) ───────── */
+
+const USER_EXPORT_COLUMNS: { key: keyof User; label: string }[] = [
+  { key: "firstName", label: "Имя" },
+  { key: "lastName", label: "Фамилия" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Телефон" },
+  { key: "age", label: "Возраст" },
+  { key: "birthDate", label: "Дата рождения" },
+  { key: "telegram", label: "Telegram" },
+  { key: "role", label: "Роль" },
+  { key: "teamPosition", label: "Должность в команде" },
+  { key: "joinedAt", label: "Дата вступления" },
+  { key: "referralCode", label: "Реферальный код" },
+  { key: "referredBy", label: "Пригласила (код)" },
+  { key: "invitedCount", label: "Приглашено" },
+  { key: "points", label: "Баллы" },
+  { key: "balance", label: "Баланс" },
+  { key: "source", label: "Источник" },
+  { key: "interests", label: "Интересы" },
+  { key: "expectations", label: "Ожидания" },
+  { key: "notes", label: "Заметка" },
+]
+
+const csvEscape = (v: unknown): string => {
+  if (v === null || v === undefined) return ""
+  const s = String(v)
+  if (/[";,\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`
+  return s
+}
+
+const buildUsersCsv = (rows: User[]): string => {
+  const header = USER_EXPORT_COLUMNS.map((c) => csvEscape(c.label)).join(";")
+  const lines = rows.map((r) =>
+    USER_EXPORT_COLUMNS.map((c) => csvEscape(r[c.key])).join(";")
+  )
+  return ["\uFEFF" + header, ...lines].join("\r\n")
+}
+
+const parseCsv = (text: string): string[][] => {
+  // Удаляем BOM
+  const clean = text.replace(/^\uFEFF/, "")
+  // Определяем разделитель — точка с запятой в приоритете для русских Excel
+  const firstLine = clean.split(/\r?\n/)[0] || ""
+  const delim = firstLine.includes(";") ? ";" : ","
+  const rows: string[][] = []
+  let cur: string[] = []
+  let field = ""
+  let inQuotes = false
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i]
+    if (inQuotes) {
+      if (ch === '"') {
+        if (clean[i + 1] === '"') {
+          field += '"'
+          i++
+        } else {
+          inQuotes = false
+        }
+      } else {
+        field += ch
+      }
+    } else {
+      if (ch === '"') inQuotes = true
+      else if (ch === delim) {
+        cur.push(field)
+        field = ""
+      } else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && clean[i + 1] === "\n") i++
+        cur.push(field)
+        rows.push(cur)
+        cur = []
+        field = ""
+      } else field += ch
+    }
+  }
+  if (field.length > 0 || cur.length > 0) {
+    cur.push(field)
+    rows.push(cur)
+  }
+  return rows.filter((r) => r.length > 1 || (r[0] && r[0].trim()))
+}
+
+const HEADER_ALIASES: Record<string, keyof User> = {
+  имя: "firstName",
+  firstname: "firstName",
+  "first name": "firstName",
+  name: "firstName",
+  фамилия: "lastName",
+  lastname: "lastName",
+  "last name": "lastName",
+  email: "email",
+  почта: "email",
+  "e-mail": "email",
+  телефон: "phone",
+  phone: "phone",
+  возраст: "age",
+  age: "age",
+  "дата рождения": "birthDate",
+  birthdate: "birthDate",
+  telegram: "telegram",
+  тг: "telegram",
+  роль: "role",
+  role: "role",
+  должность: "teamPosition",
+  "должность в команде": "teamPosition",
+  teamposition: "teamPosition",
+  "дата вступления": "joinedAt",
+  joinedat: "joinedAt",
+  "реферальный код": "referralCode",
+  referralcode: "referralCode",
+  "пригласила (код)": "referredBy",
+  referredby: "referredBy",
+  приглашено: "invitedCount",
+  invitedcount: "invitedCount",
+  баллы: "points",
+  points: "points",
+  баланс: "balance",
+  balance: "balance",
+  источник: "source",
+  source: "source",
+  интересы: "interests",
+  interests: "interests",
+  ожидания: "expectations",
+  expectations: "expectations",
+  заметка: "notes",
+  notes: "notes",
+}
+
+const mapHeaderToKey = (h: string): keyof User | null => {
+  const norm = h.trim().toLowerCase()
+  return HEADER_ALIASES[norm] || null
+}
+
+const csvRowsToUsers = (rows: string[][]): Partial<User>[] => {
+  if (rows.length === 0) return []
+  const header = rows[0].map((h) => mapHeaderToKey(h))
+  return rows.slice(1).map((r) => {
+    const obj: Partial<User> = {}
+    header.forEach((key, i) => {
+      if (!key) return
+      const raw = (r[i] || "").trim()
+      if (!raw) return
+      if (key === "points" || key === "balance" || key === "invitedCount") {
+        const n = Number(raw.replace(/\s/g, "").replace(",", "."))
+        if (!Number.isNaN(n)) (obj[key] as number) = n
+      } else if (key === "role") {
+        const v = raw.toLowerCase()
+        if (
+          v === "member" ||
+          v === "resident" ||
+          v === "blogger" ||
+          v === "team"
+        ) {
+          obj.role = v as User["role"]
+        } else if (v.includes("команд")) obj.role = "team"
+        else if (v.includes("резидент")) obj.role = "resident"
+        else if (v.includes("блог")) obj.role = "blogger"
+        else obj.role = "member"
+      } else {
+        ;(obj[key] as string) = raw
+      }
+    })
+    return obj
+  })
+}
+
+function UsersDatabaseDialog({
+  open,
+  onClose,
+  users,
+  onImport,
+}: {
+  open: boolean
+  onClose: () => void
+  users: User[]
+  onImport: (rows: Partial<User>[], mode: "merge" | "replace") => void
+}) {
+  const [importMode, setImportMode] = useState<"merge" | "replace">("merge")
+  const [preview, setPreview] = useState<Partial<User>[] | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const handleExport = () => {
+    if (users.length === 0) {
+      toast.error("Нет данных для экспорта")
+      return
+    }
+    const csv = buildUsersCsv(users)
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `mojno-users-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Экспортировано ${users.length} участниц`)
+  }
+
+  const handleExportTemplate = () => {
+    const csv = buildUsersCsv([])
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "mojno-template.csv"
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success("Шаблон скачан")
+  }
+
+  const handleFile = (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".csv") && !file.name.toLowerCase().endsWith(".txt")) {
+      toast.error("Подходят файлы CSV (можно сохранить из Excel)")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const text = String(reader.result || "")
+      const rows = parseCsv(text)
+      const parsed = csvRowsToUsers(rows)
+      const valid = parsed.filter((p) => p.email && p.firstName)
+      if (valid.length === 0) {
+        toast.error("Не удалось распознать данные. Проверь заголовки колонок")
+        return
+      }
+      setPreview(valid)
+    }
+    reader.readAsText(file, "utf-8")
+  }
+
+  const handleConfirmImport = () => {
+    if (!preview) return
+    onImport(preview, importMode)
+    setPreview(null)
+    onClose()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-[640px] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-black/5">
+          <DialogTitle className="text-base flex items-center gap-2">
+            <Icon name="Database" size={15} className="text-pink-600" />
+            База данных участниц
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            Экспортируй текущую базу в CSV или загрузи новых участниц из Excel
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {/* Экспорт */}
+          <div className="rounded-2xl border border-black/10 p-4 bg-gradient-to-br from-pink-50/40 to-white">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-pink-100 text-pink-700 flex-shrink-0">
+                <Icon name="Download" size={14} />
+              </span>
+              <div className="flex-1">
+                <div className="text-sm font-medium">Экспорт в Excel/CSV</div>
+                <div className="text-xs text-black/55 mt-0.5">
+                  Скачивается CSV с UTF-8 BOM и разделителем «;» — Excel
+                  откроет его сразу, без настроек.
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    onClick={handleExport}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white text-[11px] uppercase tracking-[0.18em]"
+                  >
+                    <Icon name="Download" size={12} />
+                    Скачать базу ({users.length})
+                  </button>
+                  <button
+                    onClick={handleExportTemplate}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-black/15 hover:bg-black/5 text-black/70 text-[11px] uppercase tracking-[0.18em]"
+                  >
+                    <Icon name="FileSpreadsheet" size={12} />
+                    Шаблон CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Импорт */}
+          <div className="rounded-2xl border border-black/10 p-4">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex-shrink-0">
+                <Icon name="Upload" size={14} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium">Импорт из CSV</div>
+                <div className="text-xs text-black/55 mt-0.5">
+                  В Excel сохрани файл как «CSV UTF-8 (с разделителями-запятыми)
+                  *.csv». Заголовки на русском или английском —
+                  обязательны минимум «Имя» и «Email».
+                </div>
+
+                <div className="mt-3 flex gap-1 p-1 rounded-full bg-black/[0.04] w-fit">
+                  {(["merge", "replace"] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setImportMode(m)}
+                      className={`px-3 py-1.5 rounded-full text-[10px] uppercase tracking-[0.18em] transition-colors ${
+                        importMode === m ? "bg-black text-white" : "text-black/60"
+                      }`}
+                    >
+                      {m === "merge" ? "Дополнить" : "Заменить"}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-[11px] text-black/45 mt-1.5">
+                  {importMode === "merge"
+                    ? "Существующие записи (по email) будут обновлены, новые — добавлены."
+                    : "Внимание: все текущие участницы будут удалены и заменены загруженными."}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.txt,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    e.target.value = ""
+                    if (f) handleFile(f)
+                  }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] uppercase tracking-[0.18em]"
+                >
+                  <Icon name="FilePlus" size={12} />
+                  Выбрать CSV
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Превью импорта */}
+          {preview && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Icon name="Eye" size={14} className="text-emerald-700" />
+                <div className="text-sm font-medium text-emerald-800">
+                  Найдено записей: {preview.length}
+                </div>
+              </div>
+              <div className="max-h-[180px] overflow-y-auto rounded-lg border border-emerald-200 bg-white">
+                <table className="w-full text-[11px]">
+                  <thead className="sticky top-0 bg-emerald-50">
+                    <tr>
+                      <th className="text-left px-2 py-1.5">Имя</th>
+                      <th className="text-left px-2 py-1.5">Email</th>
+                      <th className="text-left px-2 py-1.5">Телефон</th>
+                      <th className="text-left px-2 py-1.5">Роль</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.slice(0, 50).map((p, i) => (
+                      <tr key={i} className="border-t border-emerald-100">
+                        <td className="px-2 py-1">
+                          {p.firstName} {p.lastName || ""}
+                        </td>
+                        <td className="px-2 py-1 text-black/65">{p.email}</td>
+                        <td className="px-2 py-1 text-black/65">{p.phone || "—"}</td>
+                        <td className="px-2 py-1 text-black/65">{p.role || "member"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {preview.length > 50 && (
+                <div className="text-[11px] text-black/45 mt-1.5">
+                  Показаны первые 50 из {preview.length}
+                </div>
+              )}
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => setPreview(null)}
+                  className="flex-1 px-3 py-2 rounded-full border border-black/15 text-[11px] uppercase tracking-[0.18em] hover:bg-black/5"
+                >
+                  Отменить
+                </button>
+                <button
+                  onClick={handleConfirmImport}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] uppercase tracking-[0.18em]"
+                >
+                  <Icon name="Check" size={12} />
+                  Загрузить {preview.length}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Поддерживаемые колонки */}
+          <details className="rounded-2xl border border-black/10 p-4">
+            <summary className="cursor-pointer text-sm font-medium flex items-center gap-2">
+              <Icon name="Info" size={13} className="text-pink-500" />
+              Поддерживаемые колонки
+            </summary>
+            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-black/65">
+              {USER_EXPORT_COLUMNS.map((c) => (
+                <div key={String(c.key)} className="flex justify-between">
+                  <span>{c.label}</span>
+                  <span className="text-black/35">{String(c.key)}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+
+        <div className="flex gap-2 px-6 py-3 border-t border-black/5 bg-white">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-full border border-black/15 text-xs uppercase tracking-[0.2em] hover:bg-black/5"
+          >
+            Закрыть
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -2346,42 +2808,30 @@ function EventForm({
   const [groupLink, setGroupLink] = useState(initial?.groupLink || "")
   const [description, setDescription] = useState(initial?.description || "")
   const [image, setImage] = useState<string | undefined>(initial?.image)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ""
     if (!file) return
     if (!file.type.startsWith("image/")) {
       toast.error("Подойдёт только изображение")
       return
     }
-    if (file.size > 1.5 * 1024 * 1024) {
-      toast.error("Слишком большой файл — выбери изображение до 1.5 МБ")
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Слишком большой файл — выбери изображение до 5 МБ")
       return
     }
     const reader = new FileReader()
     reader.onload = () => {
-      // Сжимаем до квадрата 256 для иконки
-      const img = new Image()
-      img.onload = () => {
-        const size = 256
-        const canvas = document.createElement("canvas")
-        canvas.width = size
-        canvas.height = size
-        const ctx = canvas.getContext("2d")
-        if (!ctx) {
-          setImage(reader.result as string)
-          return
-        }
-        const minSide = Math.min(img.width, img.height)
-        const sx = (img.width - minSide) / 2
-        const sy = (img.height - minSide) / 2
-        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size)
-        setImage(canvas.toDataURL("image/jpeg", 0.85))
-      }
-      img.onerror = () => setImage(reader.result as string)
-      img.src = reader.result as string
+      setCropSrc(reader.result as string)
     }
     reader.readAsDataURL(file)
+  }
+
+  const reCropImage = () => {
+    if (!image) return
+    setCropSrc(image)
   }
 
   const submit = (e: React.FormEvent) => {
@@ -2442,7 +2892,7 @@ function EventForm({
                 <Icon name="ImagePlus" size={12} className="text-pink-500" />
                 Иконка мероприятия (фото)
               </Label>
-              <div className="flex gap-1.5 mt-1.5">
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
                 <label className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-50 border border-pink-200 hover:bg-pink-100 text-pink-700 text-[10px] uppercase tracking-[0.18em] cursor-pointer">
                   <Icon name="Upload" size={11} />
                   {image ? "Заменить" : "Загрузить"}
@@ -2453,6 +2903,16 @@ function EventForm({
                     className="hidden"
                   />
                 </label>
+                {image && (
+                  <button
+                    type="button"
+                    onClick={reCropImage}
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-black/10 hover:bg-black/5 text-black/70 text-[10px] uppercase tracking-[0.18em]"
+                  >
+                    <Icon name="Crop" size={11} />
+                    Кадрировать
+                  </button>
+                )}
                 {image && (
                   <button
                     type="button"
@@ -2586,6 +3046,16 @@ function EventForm({
           </div>
         </form>
       </DialogContent>
+
+      <ImageCropper
+        open={!!cropSrc}
+        src={cropSrc}
+        onCancel={() => setCropSrc(null)}
+        onCrop={(dataUrl) => {
+          setImage(dataUrl)
+          setCropSrc(null)
+        }}
+      />
     </Dialog>
   )
 }

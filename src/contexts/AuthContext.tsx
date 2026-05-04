@@ -82,6 +82,10 @@ interface AuthContextType {
   ) => { ok: boolean; recipientName?: string; error?: string }
   getAllUsers: () => User[]
   updateUserByEmail: (email: string, patch: Partial<User>) => boolean
+  importUsers: (
+    rows: Partial<User>[],
+    opts?: { mode?: "merge" | "replace"; defaultPassword?: string }
+  ) => { added: number; updated: number; skipped: number }
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -335,6 +339,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return true
   }
 
+  const importUsers: AuthContextType["importUsers"] = (rows, opts) => {
+    const mode = opts?.mode || "merge"
+    const defaultPassword = opts?.defaultPassword || "club2025"
+    const users = mode === "replace" ? [] : readUsers()
+    let added = 0
+    let updated = 0
+    let skipped = 0
+    rows.forEach((r) => {
+      const email = (r.email || "").trim().toLowerCase()
+      if (!email || !r.firstName) {
+        skipped++
+        return
+      }
+      const idx = users.findIndex((u) => u.email.toLowerCase() === email)
+      if (idx >= 0) {
+        users[idx] = { ...users[idx], ...r, email: users[idx].email }
+        updated++
+      } else {
+        const su: StoredUser = ensureUserDefaults({
+          firstName: r.firstName || "",
+          lastName: r.lastName || "",
+          email,
+          phone: r.phone || "",
+          age: r.age,
+          birthDate: r.birthDate,
+          telegram: r.telegram,
+          interests: r.interests,
+          expectations: r.expectations,
+          source: r.source,
+          joinedAt: r.joinedAt || new Date().toISOString(),
+          referralCode: r.referralCode || generateReferralCode(r.firstName || "club"),
+          referredBy: r.referredBy,
+          invitedCount: r.invitedCount || 0,
+          invitedByRole: r.invitedByRole,
+          points: typeof r.points === "number" ? r.points : 0,
+          balance: typeof r.balance === "number" ? r.balance : 0,
+          role: r.role || "member",
+          teamPosition: r.teamPosition,
+          notes: r.notes,
+          password: defaultPassword,
+        } as StoredUser)
+        users.push(su)
+        added++
+      }
+    })
+    writeUsers(users)
+    return { added, updated, skipped }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -349,6 +402,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         topUpBalanceForCode,
         getAllUsers,
         updateUserByEmail,
+        importUsers,
       }}
     >
       {children}
