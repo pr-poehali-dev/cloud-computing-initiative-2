@@ -100,6 +100,7 @@ const STATUS_COLOR: Record<RequestStatus, string> = {
 }
 
 const CUSTOM_EVENTS_KEY = "mojno_custom_events"
+const HIDDEN_BASE_EVENTS_KEY = "mojno_base_events_hidden"
 
 interface CustomEvent extends ClubEvent {
   id: string
@@ -118,6 +119,20 @@ const readCustomEvents = (): CustomEvent[] => {
 
 const writeCustomEvents = (list: CustomEvent[]) =>
   localStorage.setItem(CUSTOM_EVENTS_KEY, JSON.stringify(list))
+
+const readHiddenBaseEvents = (): string[] => {
+  try {
+    const raw = localStorage.getItem(HIDDEN_BASE_EVENTS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const writeHiddenBaseEvents = (list: string[]) =>
+  localStorage.setItem(HIDDEN_BASE_EVENTS_KEY, JSON.stringify(list))
 
 export default function Team() {
   const { user, isAuthenticated } = useAuth()
@@ -1016,6 +1031,7 @@ function EventsTab() {
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [allRegs, setAllRegs] = useState<RegistrationRow[]>([])
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
+  const [hiddenBase, setHiddenBase] = useState<string[]>([])
 
   const reloadRegs = () => {
     try {
@@ -1029,8 +1045,14 @@ function EventsTab() {
 
   useEffect(() => {
     setCustomEvents(readCustomEvents())
+    setHiddenBase(readHiddenBaseEvents())
     reloadRegs()
   }, [])
+
+  const visibleBaseEvents = useMemo(
+    () => EVENTS.filter((e) => !hiddenBase.includes(e.title)),
+    [hiddenBase]
+  )
 
   const registrationsByTitle = useMemo(() => {
     const map = new Map<string, number>()
@@ -1253,8 +1275,21 @@ function EventsTab() {
       persist(customEvents.map((e) => (e.id === ev.id ? ev : e)))
       toast.success("Мероприятие обновлено")
     } else {
+      // Если редактируем базовое — скрываем оригинал
+      const wasBase = EVENTS.some((b) => b.title === editing?.title)
+      if (wasBase && editing) {
+        const nextHidden = hiddenBase.includes(editing.title)
+          ? hiddenBase
+          : [...hiddenBase, editing.title]
+        writeHiddenBaseEvents(nextHidden)
+        setHiddenBase(nextHidden)
+      }
       persist([ev, ...customEvents])
-      toast.success("Мероприятие создано")
+      toast.success(
+        editing && EVENTS.some((b) => b.title === editing.title)
+          ? "Мероприятие обновлено"
+          : "Мероприятие создано"
+      )
     }
     setEditing(null)
     setCreating(false)
@@ -1264,6 +1299,30 @@ function EventsTab() {
     if (!window.confirm("Удалить мероприятие?")) return
     persist(customEvents.filter((e) => e.id !== id))
     toast.success("Удалено")
+  }
+
+  const editBaseEvent = (e: ClubEvent) => {
+    // Конвертируем базовое в редактируемое
+    setEditing({
+      ...e,
+      id: `ce-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    })
+  }
+
+  const removeBaseEvent = (title: string) => {
+    if (!window.confirm("Удалить базовое мероприятие? Оно исчезнет из календаря."))
+      return
+    const next = [...hiddenBase, title]
+    writeHiddenBaseEvents(next)
+    setHiddenBase(next)
+    toast.success("Мероприятие удалено")
+  }
+
+  const restoreBaseEvent = (title: string) => {
+    const next = hiddenBase.filter((t) => t !== title)
+    writeHiddenBaseEvents(next)
+    setHiddenBase(next)
+    toast.success("Мероприятие восстановлено")
   }
 
   return (
@@ -1401,49 +1460,113 @@ function EventsTab() {
         </Panel>
       )}
 
-      <Panel title="Базовые мероприятия (только просмотр)" icon="CalendarDays">
-        <ul className="divide-y divide-black/5">
-          {EVENTS.slice(0, 12).map((e, idx) => {
-            const isOpen = expandedEvent === e.title
-            const count = registrationsByTitle.get(e.title) || 0
-            return (
-              <li key={idx} className="py-2.5">
-                <button
-                  type="button"
-                  onClick={() => setExpandedEvent(isOpen ? null : e.title)}
-                  className="w-full flex items-center gap-3 flex-wrap text-left rounded-xl hover:bg-black/[0.03] -mx-2 px-2 py-1 transition-colors"
-                >
-                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-stone-100 text-stone-600 flex-shrink-0">
-                    <Icon name="CalendarDays" size={14} />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate flex items-center gap-1.5">
-                      {e.title}
-                      <Icon
-                        name={isOpen ? "ChevronUp" : "ChevronDown"}
-                        size={14}
-                        className="text-black/40 flex-shrink-0"
-                      />
-                    </div>
-                    <div className="text-xs text-black/55">
-                      {formatDate(e.date)} · {e.time} · {e.location}
-                    </div>
+      <Panel title="Базовые мероприятия" icon="CalendarDays">
+        {visibleBaseEvents.length === 0 ? (
+          <div className="rounded-xl bg-black/[0.02] border border-dashed border-black/10 px-4 py-6 text-center text-xs text-black/45">
+            Все базовые мероприятия скрыты
+          </div>
+        ) : (
+          <ul className="divide-y divide-black/5">
+            {visibleBaseEvents.slice(0, 12).map((e, idx) => {
+              const isOpen = expandedEvent === e.title
+              const count = registrationsByTitle.get(e.title) || 0
+              return (
+                <li key={idx} className="py-2.5">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedEvent(isOpen ? null : e.title)}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl hover:bg-black/[0.03] -mx-2 px-2 py-1 transition-colors"
+                    >
+                      <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-stone-100 text-stone-600 flex-shrink-0">
+                        <Icon name="CalendarDays" size={14} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate flex items-center gap-1.5">
+                          {e.title}
+                          <Icon
+                            name={isOpen ? "ChevronUp" : "ChevronDown"}
+                            size={14}
+                            className="text-black/40 flex-shrink-0"
+                          />
+                        </div>
+                        <div className="text-xs text-black/55">
+                          {formatDate(e.date)} · {e.time} · {e.location}
+                        </div>
+                      </div>
+                      <div className="text-xs text-black/55 flex-shrink-0">
+                        Записано: <b className="text-black/80">{count}</b>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => editBaseEvent(e)}
+                      className="p-2 rounded-full hover:bg-black/5"
+                      title="Редактировать"
+                    >
+                      <Icon name="Pencil" size={14} />
+                    </button>
+                    <button
+                      onClick={() => removeBaseEvent(e.title)}
+                      className="p-2 rounded-full hover:bg-red-50 text-red-500"
+                      title="Удалить"
+                    >
+                      <Icon name="Trash2" size={14} />
+                    </button>
                   </div>
-                  <div className="text-xs text-black/55 flex-shrink-0">
-                    Записано: <b className="text-black/80">{count}</b>
-                  </div>
-                </button>
-                {isOpen && (
-                  <div className="mt-3 pl-12">{renderParticipants(e.title)}</div>
-                )}
-              </li>
-            )
-          })}
-        </ul>
+                  {isOpen && (
+                    <div className="mt-3 pl-12">{renderParticipants(e.title)}</div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
         <div className="text-xs text-black/45 px-2 pt-2">
-          Показаны первые 12 из {EVENTS.length}
+          Показано {Math.min(12, visibleBaseEvents.length)} из {visibleBaseEvents.length}
         </div>
       </Panel>
+
+      {hiddenBase.length > 0 && (
+        <Panel title={`Скрытые базовые · ${hiddenBase.length}`} icon="EyeOff">
+          <ul className="divide-y divide-black/5">
+            {hiddenBase.map((title) => {
+              const orig = EVENTS.find((e) => e.title === title)
+              return (
+                <li
+                  key={title}
+                  className="py-2.5 flex items-center gap-3 flex-wrap"
+                >
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-stone-100 text-stone-400 flex-shrink-0">
+                    <Icon name="EyeOff" size={14} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-black/65 truncate line-through">
+                      {title}
+                    </div>
+                    {orig && (
+                      <div className="text-xs text-black/45">
+                        {formatDate(orig.date)} · {orig.time} · {orig.location}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => restoreBaseEvent(title)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black/10 hover:bg-black/5 text-[11px] uppercase tracking-[0.18em]"
+                  >
+                    <Icon name="RotateCcw" size={12} />
+                    Восстановить
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          <div className="text-xs text-black/45 px-2 pt-2">
+            Эти мероприятия не показываются участницам в календаре. Если базовое
+            мероприятие было отредактировано, оригинал скрыт, а новая версия
+            появилась в блоке «Команда добавила».
+          </div>
+        </Panel>
+      )}
 
       {(creating || editing) && (
         <EventForm

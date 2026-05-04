@@ -35,6 +35,7 @@ type View = "list" | "register"
 
 const REGISTRATIONS_KEY = "mojno_event_registrations"
 const CUSTOM_EVENTS_KEY = "mojno_custom_events"
+const HIDDEN_BASE_EVENTS_KEY = "mojno_base_events_hidden"
 
 interface StoredRegistration {
   email: string
@@ -63,6 +64,17 @@ const readCustomEvents = (): ClubEvent[] => {
   }
 }
 
+const readHiddenBaseEvents = (): string[] => {
+  try {
+    const raw = localStorage.getItem(HIDDEN_BASE_EVENTS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
 const readRegistrations = (): StoredRegistration[] => {
   try {
     const raw = localStorage.getItem(REGISTRATIONS_KEY)
@@ -80,11 +92,13 @@ export default function EventsModal({ open, onOpenChange }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today)
   const [view, setView] = useState<View>("list")
   const [customEvents, setCustomEvents] = useState<ClubEvent[]>([])
+  const [hiddenBase, setHiddenBase] = useState<string[]>([])
   const [registrations, setRegistrations] = useState<StoredRegistration[]>([])
 
   useEffect(() => {
     if (open) {
       setCustomEvents(readCustomEvents())
+      setHiddenBase(readHiddenBaseEvents())
       setRegistrations(readRegistrations())
     }
   }, [open])
@@ -112,7 +126,10 @@ export default function EventsModal({ open, onOpenChange }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, user])
 
-  const allEvents = useMemo(() => [...customEvents, ...EVENTS], [customEvents])
+  const allEvents = useMemo(
+    () => [...customEvents, ...EVENTS.filter((e) => !hiddenBase.includes(e.title))],
+    [customEvents, hiddenBase]
+  )
 
   const filtered = useMemo(() => {
     if (activeCategories.size === 0) return allEvents
