@@ -22,6 +22,7 @@ import { RequestsProvider } from "@/contexts/RequestsContext";
 import { NewsProvider } from "@/contexts/NewsContext";
 import { TestimonialsProvider } from "@/contexts/TestimonialsContext";
 import { TeamChatProvider } from "@/contexts/TeamChatContext";
+import { TeamPlannerProvider } from "@/contexts/TeamPlannerContext";
 import { EventSuggestionsProvider } from "@/contexts/EventSuggestionsContext";
 import { CategoriesProvider } from "@/contexts/CategoriesContext";
 import { DirectoryProvider } from "@/contexts/DirectoryContext";
@@ -41,6 +42,7 @@ const App = () => (
             <NewsProvider>
               <TestimonialsProvider>
                 <TeamChatProvider>
+                  <TeamPlannerProvider>
                   <EventSuggestionsProvider>
                   <CategoriesProvider>
                   <DirectoryProvider>
@@ -72,6 +74,7 @@ const App = () => (
                   </DirectoryProvider>
                   </CategoriesProvider>
                   </EventSuggestionsProvider>
+                  </TeamPlannerProvider>
                 </TeamChatProvider>
               </TestimonialsProvider>
             </NewsProvider>

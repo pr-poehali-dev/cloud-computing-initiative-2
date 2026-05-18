@@ -17,6 +17,7 @@ import { useRequests, type RequestStatus } from "@/contexts/RequestsContext"
 import { useNews, type NewsPost } from "@/contexts/NewsContext"
 import { useTestimonials } from "@/contexts/TestimonialsContext"
 import { useTeamChat } from "@/contexts/TeamChatContext"
+import { useTeamPlanner } from "@/contexts/TeamPlannerContext"
 import { useNotifications } from "@/contexts/NotificationsContext"
 import { useEventSuggestions } from "@/contexts/EventSuggestionsContext"
 import {
@@ -66,7 +67,7 @@ const TABS: { id: Tab; label: string; icon: string; description?: string }[] = [
   { id: "testimonials", label: "Отзывы", icon: "MessageSquareQuote", description: "Модерация отзывов" },
   { id: "news", label: "Новости", icon: "Newspaper", description: "Анонсы и публикации" },
   { id: "broadcasts", label: "Рассылки", icon: "Send", description: "Уведомления участницам" },
-  { id: "chat", label: "Чат команды", icon: "Lock", description: "Закрытое общение" },
+  { id: "chat", label: "Чат и планер", icon: "Lock", description: "Закрытое общение и план задач" },
 ]
 
 const formatDate = (iso: string) =>
@@ -4507,15 +4508,29 @@ function BroadcastsTab() {
 function ChatTab() {
   const { user } = useAuth()
   const { messages, sendMessage, deleteMessage } = useTeamChat()
+  const { items: plannerItems } = useTeamPlanner()
+  const [view, setView] = useState<"chat" | "planner">("chat")
   const [text, setText] = useState("")
   const endRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages.length])
+    if (view === "chat") {
+      endRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [messages.length, view])
 
   if (!user) return null
   const myEmail = user.email
+
+  const pendingForMe = plannerItems.filter(
+    (i) =>
+      i.status === "open" &&
+      i.assignees.some(
+        (a) =>
+          a.email.toLowerCase() === myEmail.toLowerCase() &&
+          a.status === "pending"
+      )
+  ).length
 
   const send = () => {
     const t = text.trim()
@@ -4531,8 +4546,23 @@ function ChatTab() {
     setText("")
   }
 
+  if (view === "planner") {
+    return (
+      <div className="space-y-3">
+        <PlannerSwitcher
+          view={view}
+          onChange={setView}
+          pendingForMe={pendingForMe}
+        />
+        <PlannerView />
+      </div>
+    )
+  }
+
   return (
-    <div className="bg-white rounded-2xl border border-black/5 flex flex-col h-[70vh] overflow-hidden">
+    <div className="space-y-3">
+      <PlannerSwitcher view={view} onChange={setView} pendingForMe={pendingForMe} />
+      <div className="bg-white rounded-2xl border border-black/5 flex flex-col h-[65vh] overflow-hidden">
       <div className="px-4 py-3 border-b border-black/5 flex items-center gap-2">
         <Icon name="Lock" size={16} className="text-pink-600" />
         <div>
@@ -4604,7 +4634,683 @@ function ChatTab() {
           <Icon name="Send" size={14} />
         </button>
       </div>
+      </div>
     </div>
+  )
+}
+
+function PlannerSwitcher({
+  view,
+  onChange,
+  pendingForMe,
+}: {
+  view: "chat" | "planner"
+  onChange: (v: "chat" | "planner") => void
+  pendingForMe: number
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-black/5 p-1 flex gap-1">
+      <button
+        onClick={() => onChange("chat")}
+        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs uppercase tracking-[0.18em] transition-colors ${
+          view === "chat"
+            ? "bg-gradient-to-br from-amber-100 via-pink-100 to-fuchsia-100 text-black"
+            : "text-black/55 hover:bg-black/5"
+        }`}
+      >
+        <Icon name="MessageCircle" size={13} />
+        Чат
+      </button>
+      <button
+        onClick={() => onChange("planner")}
+        className={`flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs uppercase tracking-[0.18em] transition-colors relative ${
+          view === "planner"
+            ? "bg-gradient-to-br from-amber-100 via-pink-100 to-fuchsia-100 text-black"
+            : "text-black/55 hover:bg-black/5"
+        }`}
+      >
+        <Icon name="CalendarCheck" size={13} />
+        Планер
+        {pendingForMe > 0 && (
+          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-pink-600 text-white text-[10px] px-1 font-medium">
+            {pendingForMe}
+          </span>
+        )}
+      </button>
+    </div>
+  )
+}
+
+/* ───────── Planner ───────── */
+
+const PLANNER_KIND_LABEL: Record<string, { label: string; icon: string; color: string }> = {
+  task: { label: "Задача", icon: "ClipboardList", color: "text-sky-700 bg-sky-100 border-sky-200" },
+  reminder: { label: "Напоминание", icon: "Bell", color: "text-amber-700 bg-amber-100 border-amber-200" },
+  event: { label: "Мероприятие", icon: "CalendarDays", color: "text-fuchsia-700 bg-fuchsia-100 border-fuchsia-200" },
+}
+
+function PlannerView() {
+  const { user, getAllUsers } = useAuth()
+  const { items, addItem, removeItem, setStatus, respond } = useTeamPlanner()
+  const [creating, setCreating] = useState(false)
+  const [filter, setFilter] = useState<"all" | "mine" | "pending" | "done">("all")
+
+  const myEmail = (user?.email || "").toLowerCase()
+
+  const teamUsers = useMemo(
+    () => getAllUsers().filter((u) => u.role === "team"),
+    [getAllUsers]
+  )
+
+  const sorted = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const ad = a.dueAt ? new Date(a.dueAt).getTime() : Number.MAX_SAFE_INTEGER
+      const bd = b.dueAt ? new Date(b.dueAt).getTime() : Number.MAX_SAFE_INTEGER
+      return ad - bd
+    })
+  }, [items])
+
+  const filtered = useMemo(() => {
+    return sorted.filter((i) => {
+      if (filter === "done") return i.status === "done"
+      if (i.status === "cancelled") return false
+      if (filter === "mine")
+        return (
+          i.createdByEmail.toLowerCase() === myEmail ||
+          i.assignees.some((a) => a.email.toLowerCase() === myEmail)
+        )
+      if (filter === "pending")
+        return (
+          i.status === "open" &&
+          i.assignees.some(
+            (a) => a.email.toLowerCase() === myEmail && a.status === "pending"
+          )
+        )
+      return i.status !== "done"
+    })
+  }, [sorted, filter, myEmail])
+
+  const counts = useMemo(() => {
+    const mine = items.filter(
+      (i) =>
+        i.createdByEmail.toLowerCase() === myEmail ||
+        i.assignees.some((a) => a.email.toLowerCase() === myEmail)
+    ).length
+    const pending = items.filter(
+      (i) =>
+        i.status === "open" &&
+        i.assignees.some(
+          (a) => a.email.toLowerCase() === myEmail && a.status === "pending"
+        )
+    ).length
+    const done = items.filter((i) => i.status === "done").length
+    return { all: items.filter((i) => i.status !== "done" && i.status !== "cancelled").length, mine, pending, done }
+  }, [items, myEmail])
+
+  const formatDue = (iso?: string) => {
+    if (!iso) return null
+    const d = new Date(iso)
+    return d.toLocaleString("ru-RU", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  if (!user) return null
+
+  return (
+    <div className="space-y-3">
+      <div className="bg-white rounded-2xl border border-black/5 p-4 flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2
+            className="text-xl"
+            style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+          >
+            Планер команды
+          </h2>
+          <p className="text-xs text-black/55 mt-0.5">
+            Заметки, дела и подтверждение участием — для каждой задачи
+          </p>
+        </div>
+        <button
+          onClick={() => setCreating(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-600 hover:bg-pink-700 text-white text-xs uppercase tracking-[0.2em]"
+        >
+          <Icon name="Plus" size={14} />
+          Новая запись
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <FilterChip
+          active={filter === "all"}
+          onClick={() => setFilter("all")}
+          label="Все активные"
+          count={counts.all}
+        />
+        <FilterChip
+          active={filter === "pending"}
+          onClick={() => setFilter("pending")}
+          label="Ждут моего подтверждения"
+          count={counts.pending}
+          accent
+        />
+        <FilterChip
+          active={filter === "mine"}
+          onClick={() => setFilter("mine")}
+          label="Мои"
+          count={counts.mine}
+        />
+        <FilterChip
+          active={filter === "done"}
+          onClick={() => setFilter("done")}
+          label="Выполнены"
+          count={counts.done}
+        />
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-2xl bg-white border border-dashed border-black/10 px-4 py-10 text-center">
+          <Icon name="CalendarCheck" size={28} className="text-black/25 mx-auto mb-2" />
+          <div className="text-sm text-black/55">Записей в этой категории нет</div>
+          <button
+            onClick={() => setCreating(true)}
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-black/10 hover:bg-black/5 text-xs uppercase tracking-[0.18em]"
+          >
+            <Icon name="Plus" size={12} />
+            Создать первую
+          </button>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {filtered.map((item) => {
+            const kindMeta = PLANNER_KIND_LABEL[item.kind] || PLANNER_KIND_LABEL.task
+            const overdue =
+              item.status === "open" &&
+              item.dueAt &&
+              new Date(item.dueAt).getTime() < Date.now()
+            const mine = item.assignees.find((a) => a.email.toLowerCase() === myEmail)
+            const accepted = item.assignees.filter((a) => a.status === "accepted").length
+            const declined = item.assignees.filter((a) => a.status === "declined").length
+            const pending = item.assignees.filter((a) => a.status === "pending").length
+            const isAuthor = item.createdByEmail.toLowerCase() === myEmail
+            return (
+              <li
+                key={item.id}
+                className={`rounded-2xl border bg-white p-4 transition-colors ${
+                  item.status === "done"
+                    ? "border-emerald-200 bg-emerald-50/40 opacity-80"
+                    : overdue
+                    ? "border-red-200"
+                    : "border-black/5"
+                }`}
+              >
+                <div className="flex items-start gap-3 flex-wrap">
+                  <span
+                    className={`inline-flex items-center justify-center w-10 h-10 rounded-full border flex-shrink-0 ${kindMeta.color}`}
+                  >
+                    <Icon name={kindMeta.icon} size={15} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div
+                        className={`text-sm font-medium ${
+                          item.status === "done" ? "line-through text-black/55" : ""
+                        }`}
+                      >
+                        {item.title}
+                      </div>
+                      <span className={`text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${kindMeta.color}`}>
+                        {kindMeta.label}
+                      </span>
+                      {item.status === "done" && (
+                        <span className="text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                          Выполнено
+                        </span>
+                      )}
+                      {overdue && item.status !== "done" && (
+                        <span className="text-[9px] uppercase tracking-[0.18em] px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
+                          Просрочено
+                        </span>
+                      )}
+                    </div>
+                    {item.description && (
+                      <div className="text-xs text-black/60 mt-1 whitespace-pre-wrap">
+                        {item.description}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-black/55 mt-2">
+                      {item.dueAt && (
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name="CalendarClock" size={11} />
+                          Срок: {formatDue(item.dueAt)}
+                        </span>
+                      )}
+                      {item.remindAt && (
+                        <span className="inline-flex items-center gap-1">
+                          <Icon name="Bell" size={11} />
+                          Напомнить: {formatDue(item.remindAt)}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="User" size={11} />
+                        {item.createdByName}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="Users" size={11} />
+                        {item.assignees.length} участ.
+                        {accepted > 0 && (
+                          <span className="text-emerald-600">
+                            {" "}
+                            · {accepted} ✓
+                          </span>
+                        )}
+                        {pending > 0 && (
+                          <span className="text-amber-600">
+                            {" "}
+                            · {pending} ожид.
+                          </span>
+                        )}
+                        {declined > 0 && (
+                          <span className="text-red-500">
+                            {" "}
+                            · {declined} откл.
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    {item.assignees.length > 0 && (
+                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        {item.assignees.map((a) => {
+                          const isMe = a.email.toLowerCase() === myEmail
+                          return (
+                            <span
+                              key={a.email}
+                              className={`inline-flex items-center gap-1 text-[10px] rounded-full px-2 py-1 border ${
+                                a.status === "accepted"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : a.status === "declined"
+                                  ? "bg-red-50 text-red-600 border-red-200"
+                                  : "bg-stone-50 text-stone-600 border-stone-200"
+                              } ${isMe ? "ring-1 ring-pink-400" : ""}`}
+                              title={
+                                a.respondedAt
+                                  ? `Ответ: ${new Date(a.respondedAt).toLocaleString("ru-RU")}`
+                                  : "Ждём ответа"
+                              }
+                            >
+                              <Icon
+                                name={
+                                  a.status === "accepted"
+                                    ? "Check"
+                                    : a.status === "declined"
+                                    ? "X"
+                                    : "Clock"
+                                }
+                                size={10}
+                              />
+                              {a.name || a.email}
+                              {isMe && <span className="text-pink-600">· ты</span>}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Действия */}
+                <div className="mt-3 pt-3 border-t border-black/5 flex flex-wrap gap-1.5 items-center">
+                  {mine && mine.status === "pending" && item.status === "open" && (
+                    <>
+                      <button
+                        onClick={() => {
+                          respond(item.id, myEmail, "accepted")
+                          toast.success("Подтверждение отправлено")
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] uppercase tracking-[0.18em]"
+                      >
+                        <Icon name="Check" size={11} />
+                        Подтвердить
+                      </button>
+                      <button
+                        onClick={() => {
+                          const c = window.prompt("Причина отказа (необязательно):") || undefined
+                          respond(item.id, myEmail, "declined", c)
+                          toast.success("Отметка сохранена")
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-red-200 text-red-500 hover:bg-red-50 text-[10px] uppercase tracking-[0.18em]"
+                      >
+                        <Icon name="X" size={11} />
+                        Отказаться
+                      </button>
+                    </>
+                  )}
+                  {mine && mine.status !== "pending" && item.status === "open" && (
+                    <button
+                      onClick={() => respond(item.id, myEmail, "pending")}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-black/10 hover:bg-black/5 text-[10px] uppercase tracking-[0.18em]"
+                    >
+                      <Icon name="RotateCcw" size={11} />
+                      Изменить ответ
+                    </button>
+                  )}
+                  {isAuthor && item.status === "open" && (
+                    <button
+                      onClick={() => {
+                        setStatus(item.id, "done")
+                        toast.success("Отмечено как выполнено")
+                      }}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-[10px] uppercase tracking-[0.18em]"
+                    >
+                      <Icon name="CheckCheck" size={11} />
+                      Закрыть
+                    </button>
+                  )}
+                  {isAuthor && item.status === "done" && (
+                    <button
+                      onClick={() => setStatus(item.id, "open")}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-black/10 hover:bg-black/5 text-[10px] uppercase tracking-[0.18em]"
+                    >
+                      <Icon name="RotateCcw" size={11} />
+                      Вернуть в работу
+                    </button>
+                  )}
+                  {isAuthor && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Удалить запись?"))
+                          removeItem(item.id, user.email)
+                      }}
+                      className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-full hover:bg-red-50 text-red-500 text-[10px] uppercase tracking-[0.18em]"
+                    >
+                      <Icon name="Trash2" size={11} />
+                      Удалить
+                    </button>
+                  )}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {creating && (
+        <PlannerForm
+          teamUsers={teamUsers.map((u) => ({
+            email: u.email,
+            name: `${u.firstName} ${u.lastName}`.trim() || u.email,
+            position: u.teamPosition,
+          }))}
+          currentEmail={user.email}
+          onCancel={() => setCreating(false)}
+          onCreate={(data) => {
+            addItem({
+              ...data,
+              createdByEmail: user.email,
+              createdByName: `${user.firstName} ${user.lastName}`.trim(),
+            })
+            toast.success("Запись добавлена в планер")
+            setCreating(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function FilterChip({
+  active,
+  onClick,
+  label,
+  count,
+  accent,
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+  count: number
+  accent?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-[0.18em] transition-colors ${
+        active
+          ? accent
+            ? "bg-pink-600 text-white"
+            : "bg-black text-white"
+          : accent && count > 0
+          ? "bg-pink-50 text-pink-700 border border-pink-200 hover:bg-pink-100"
+          : "bg-white border border-black/10 text-black/65 hover:bg-black/5"
+      }`}
+    >
+      {label}
+      <span
+        className={`inline-flex items-center justify-center min-w-[20px] h-[18px] rounded-full px-1 text-[10px] ${
+          active ? "bg-white/20" : "bg-black/5"
+        }`}
+      >
+        {count}
+      </span>
+    </button>
+  )
+}
+
+interface PlannerFormData {
+  kind: "task" | "reminder" | "event"
+  title: string
+  description?: string
+  dueAt?: string
+  remindAt?: string
+  assignees: Array<{ email: string; name?: string; position?: string }>
+}
+
+function PlannerForm({
+  teamUsers,
+  currentEmail,
+  onCancel,
+  onCreate,
+}: {
+  teamUsers: Array<{ email: string; name: string; position?: string }>
+  currentEmail: string
+  onCancel: () => void
+  onCreate: (data: PlannerFormData) => void
+}) {
+  const [kind, setKind] = useState<"task" | "reminder" | "event">("task")
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [dueAt, setDueAt] = useState("")
+  const [remindAt, setRemindAt] = useState("")
+  const [selected, setSelected] = useState<string[]>([])
+
+  const toggle = (email: string) => {
+    setSelected((prev) =>
+      prev.includes(email) ? prev.filter((e) => e !== email) : [...prev, email]
+    )
+  }
+
+  const selectAll = () => {
+    setSelected(teamUsers.map((u) => u.email))
+  }
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) {
+      toast.error("Укажи название")
+      return
+    }
+    const assignees = teamUsers
+      .filter((u) => selected.includes(u.email))
+      .map((u) => ({ email: u.email, name: u.name, position: u.position }))
+    onCreate({
+      kind,
+      title: title.trim(),
+      description: description.trim() || undefined,
+      dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
+      remindAt: remindAt ? new Date(remindAt).toISOString() : undefined,
+      assignees,
+    })
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent className="sm:max-w-[560px] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-black/5 flex-shrink-0">
+          <DialogTitle className="text-base">Новая запись в планере</DialogTitle>
+          <DialogDescription className="text-xs">
+            Поставь дело и отправь на подтверждение членам команды
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={submit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+            <div className="space-y-1">
+              <Label>Тип</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["task", "reminder", "event"] as const).map((k) => {
+                  const meta = PLANNER_KIND_LABEL[k]
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setKind(k)}
+                      className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs transition-colors ${
+                        kind === k
+                          ? "bg-pink-600 border-pink-600 text-white"
+                          : "border-black/10 hover:bg-black/5"
+                      }`}
+                    >
+                      <Icon name={meta.icon} size={13} />
+                      {meta.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Название*</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Например: подготовить пост к ужину 12 мая"
+                required
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Подробности</Label>
+              <Textarea
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Чек-лист, ссылки, контакты…"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Срок</Label>
+                <Input
+                  type="datetime-local"
+                  value={dueAt}
+                  onChange={(e) => setDueAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Напомнить</Label>
+                <Input
+                  type="datetime-local"
+                  value={remindAt}
+                  onChange={(e) => setRemindAt(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label>На подтверждение членам команды</Label>
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="text-[10px] uppercase tracking-[0.18em] text-pink-600 hover:text-pink-700"
+                >
+                  Выбрать всех
+                </button>
+              </div>
+              {teamUsers.length === 0 ? (
+                <div className="rounded-xl bg-black/[0.02] border border-dashed border-black/10 px-3 py-4 text-center text-xs text-black/45">
+                  В команде нет других участниц
+                </div>
+              ) : (
+                <div className="rounded-xl border border-black/10 max-h-44 overflow-y-auto divide-y divide-black/5">
+                  {teamUsers.map((u) => {
+                    const checked = selected.includes(u.email)
+                    const isMe = u.email.toLowerCase() === currentEmail.toLowerCase()
+                    return (
+                      <label
+                        key={u.email}
+                        className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-black/[0.02] ${
+                          checked ? "bg-pink-50/40" : ""
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggle(u.email)}
+                          className="w-4 h-4 accent-pink-600"
+                        />
+                        <Avatar name={u.name} team />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm truncate">
+                            {u.name}
+                            {isMe && (
+                              <span className="text-[10px] text-pink-600 ml-1.5">
+                                (ты)
+                              </span>
+                            )}
+                          </div>
+                          {u.position && (
+                            <div className="text-[11px] text-black/45 truncate">
+                              {u.position}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+              <div className="text-[10px] text-black/45">
+                Каждый отмеченный получит запись в планере и сможет «Подтвердить» или «Отказаться».
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 px-6 py-3 border-t border-black/5 bg-white flex-shrink-0">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex-1 px-4 py-2.5 rounded-full border border-black/15 text-xs uppercase tracking-[0.2em] hover:bg-black/5"
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-pink-600 text-white text-xs uppercase tracking-[0.2em] hover:bg-pink-700"
+            >
+              <Icon name="Plus" size={13} />
+              Создать
+            </button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 
